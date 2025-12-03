@@ -1,7 +1,9 @@
 // index.js
-const express = require('express');
-const app = express();
+import express from 'express'
+import {supabase} from './db/index.js';
+import {testConnection} from './db/index.js';
 
+const app = express();
 // Port configuration
 const PORT = process.env.PORT || 3000;
 
@@ -17,6 +19,30 @@ app.get('/', (req, res) => {
 app.post('/echo', (req, res) => {
   const data = req.body;
   res.json({ received: data });
+});
+
+//test database connection
+app.get("/test-connection",async(req,res) => {
+  try{
+    const ok = await testConnection();
+    if (ok){
+      return res.status(200).json({
+        status : 'ok',
+        message : 'Supabase connection successful',
+      });
+    }else{
+      return res.status(500).json({
+        status: 'fail',
+        message : 'Supabase connection failed',
+      });
+    }
+  }catch(err){
+    return res.status(500).json({
+      status: 'fail',
+      message : 'Error checking Supabase connection',
+      error : err.message,
+    });
+  }
 });
 
 // Start the server
