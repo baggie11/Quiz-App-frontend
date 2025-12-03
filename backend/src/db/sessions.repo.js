@@ -29,3 +29,25 @@ export async function getSessionById(sessionId){
     if (error) throw new Error(error.message);
     return data;
 }
+
+export async function createSession(teacherId, sessionData) {
+  const { title, description, scheduled_start, settings } = sessionData;
+
+  const { data, error } = await supabase
+    .from('sessions')
+    .insert([{
+      teacher_id: teacherId,
+      title,
+      description,
+      scheduled_start: scheduled_start || null,
+      settings: settings || {},
+      status: 'draft'
+    }])
+    .select()
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+

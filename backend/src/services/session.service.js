@@ -1,4 +1,4 @@
-import { getSessionByJoinCode, getSessionById } from "../db/sessions.repo.js";
+import { getSessionByJoinCode, getSessionById, createSession } from "../db/sessions.repo.js";
 import { createParticipant, getParticipantByNickName } from "../db/participants.repo.js";
 import { logActivity, getLatestQuestionStart } from "../db/session_activity.repo.js";
 import { getQuestionById } from "../db/questions.repo.js";
@@ -80,4 +80,17 @@ export async function getSessionStatus(sessionId) {
     started_at: session.started_at,
     currentQuestion,
   };
+}
+
+export async function addSession(teacherId, sessionData) {
+  if (!sessionData.title) throw new Error('Session title is required');
+
+  const session = await createSession(teacherId, sessionData);
+  return session;
+}
+
+export async function fetchSession(sessionId) {
+  const session = await getSessionById(sessionId);
+  if (!session) throw new Error('Session not found');
+  return session;
 }
