@@ -1,4 +1,4 @@
-import brycpt from 'bcryptjs';
+import bcrypt from 'bcryptjs';
 import 'dotenv/config';
 
 const PEPPER = process.env.PEPPER;
@@ -11,13 +11,13 @@ const PEPPER = process.env.PEPPER;
 
 export async function hashPassword(password){
     //generate cryptographically secure salt
-    const salt = await brycpt.genSalt(12);
+    const salt = await bcrypt.genSalt(12);
 
     //combine password + pepper
     const passwordPeppered = password + PEPPER;
 
     //has with brcypt (includes the salt internally)
-    const hash = await brcypt.hash(passwordPeppered,salt);
+    const hash = await bcrypt.hash(passwordPeppered,salt);
 
     return {hash,salt};
 }
@@ -34,7 +34,7 @@ export async function verifyPassword(password,salt,hash){
     const passwordPeppered = password + PEPPER;
 
     //Rehash with stored salt
-    const rehash = await brycpt.hash(passwordPeppered,salt);
+    const rehash = await bcrypt.hash(passwordPeppered,salt);
 
     return rehash === hash;
 }

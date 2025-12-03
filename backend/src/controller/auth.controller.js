@@ -1,4 +1,4 @@
-import { SignUp,Login } from "./auth.service";
+import { SignUp,Login,verifyEmail } from "../services/auth.service.js";
 
 /**
  * Controller for Host Signup
@@ -32,5 +32,19 @@ export async function userLogin(req,res){
         return res.status(200).json(result);
     }catch(err){
         return res.status(401).json({message : err.message});
+    }
+}
+
+/**
+ * Controller for email verification
+**/
+
+export async function verifyEmailController(req,res){
+    try{
+        const {email,token} = req.query;
+        const result = await verifyEmail(email,token);
+        return res.status(200).json(result);
+    }catch(err){
+        return res.status(400).json({message : err.message});
     }
 }

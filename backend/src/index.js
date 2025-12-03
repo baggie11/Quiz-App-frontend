@@ -2,7 +2,8 @@
 import express from 'express'
 import {supabase} from './db/index.js';
 import {testConnection} from './db/index.js';
-import authRoutes from './routes/auth.routes';
+import authRoutes from './routes/auth.routes.js';
+import sessionRoutes from './routes/session.routes.js';
 
 const app = express();
 // Port configuration
@@ -13,6 +14,7 @@ app.use(express.json());
 
 //Routes
 app.use('/api/auth',authRoutes);
+app.use('/api/session',sessionRoutes);
 
 // Simple GET endpoint
 app.get('/', (req, res) => {

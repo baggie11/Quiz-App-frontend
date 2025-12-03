@@ -21,11 +21,11 @@ export async function getUserByEmail(email){
 
 /**
  * Create a new user
- * @param {Object} user - { email, password_hash, salt, full_name, role, email_verified }
+ * @param {Object} user - { email, password_hash, salt, full_name, email_verified }
  * @returns {Promise<Object>} created user
 **/
 export async function createUser(user){
-    const {data, erorr} = await supabase
+    const {data, error} = await supabase
     .from('users')
     .insert([user])
     .select('*')
