@@ -1,26 +1,83 @@
-import { getSessionByJoinCode } from "../db/sessions.repo.js";
+import { getSessionByJoinCode, getSessionById } from "../db/sessions.repo.js";
 import { createParticipant, getParticipantByNickName } from "../db/participants.repo.js";
-import { logActivity } from "../db/session_activity.repo.js";
+import { logActivity, getLatestQuestionStart } from "../db/session_activity.repo.js";
+import { getQuestionById } from "../db/questions.repo.js";
 
-export async function joinSession({joinCode, nickname, userId = null}){
-    //find session
-    const session = await getSessionByJoinCode(joinCode);
-    if(!session) throw new Error('Session not found');
+/**
+ * Participant joins a session using join code
+ */
+export async function joinSession({ joinCode, nickname, userId = null }) {
+  // Find session
+  const session = await getSessionByJoinCode(joinCode);
+  if (!session) throw new Error("Session not found");
 
-    if (session.status !== 'active' && !(session.settings.allow_late_join ?? false)){
-        throw new Error('Session is not active or late joining is not allowed');
+  // Ensure session can be joined
+  const lateJoinAllowed = session?.settings?.allow_late_join ?? false;
+  if (session.status !== "active" && !lateJoinAllowed) {
+    throw new Error("Session is not active or late joining is not allowed");
+  }
+
+  // Check nickname uniqueness
+  const existing = await getParticipantByNickName(session.id, nickname);
+  if (existing) throw new Error("Roll number already exists in this session");
+
+  // Create participant
+  const participant = await createParticipant({
+    sessionId: session.id,
+    nickname,
+    userId,
+  });
+
+  // Log activity
+  await logActivity({
+    sessionId: session.id,
+    participantId: participant.id,
+    activityType: "join",
+  });
+
+  return { participant, session };
+}
+
+/**
+ * Get the current session status + the latest active question
+ */
+export async function getSessionStatus(sessionId) {
+  const session = await getSessionById(sessionId);
+  if (!session) throw new Error("Session not found");
+
+  const status = session.status;
+
+  // Get the last question_start event
+  const lastQuestionStart = await getLatestQuestionStart(sessionId);
+
+  let currentQuestion = null;
+
+  if (
+    lastQuestionStart &&
+    lastQuestionStart.metadata &&
+    lastQuestionStart.metadata.questionId
+  ) {
+    const qid = lastQuestionStart.metadata.questionId;
+    const question = await getQuestionById(qid);
+
+    if (question) {
+      currentQuestion = {
+        id: question.id,
+        text: question.question_text,
+        question_type: question.question_type,
+        options: question.options,
+        time_limit: question.time_limit,
+        order_index: question.order_index,
+        image_url: question.image_url,
+      };
     }
-    
+  }
 
-    //check nickname uniqueness
-    const existing = await getParticipantByNickName(session.id, nickname);
-    if (existing) throw new Error('Roll no already exists in this session');
-
-    //create participant
-    const participant = await createParticipant({sessionId : session.id, nickname, userId});
-
-    //log activity
-    await logActivity({sessionId : session.id, participantId : participant.id,activityType :'join'});
-
-    return {participant , session};
+  return {
+    status,
+    sessionId: session.id,
+    title: session.title,
+    started_at: session.started_at,
+    currentQuestion,
+  };
 }
