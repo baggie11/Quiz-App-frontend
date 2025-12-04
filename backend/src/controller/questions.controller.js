@@ -1,8 +1,10 @@
 import { addQuestionsToSession, listQuestions } from '../services/questions.service.js';
 
 /**
- * Add multiple questions to a session
- * Body must be:  [ { question_text, ... }, { ... } ]
+ * Add questions to a session
+ * @param {Object} req
+ * @param {Object} res
+ * @returns {Object} response
  */
 export async function addQuestionsController(req, res) {
   try {
@@ -31,8 +33,10 @@ export async function addQuestionsController(req, res) {
   }
 }
 
-/**
- * List all questions in a session
+/** List all questions for a session
+ * @param {Object} req
+ * @param {Object} res
+ * @returns {Object} response
  */
 export async function listQuestionsController(req, res) {
   try {

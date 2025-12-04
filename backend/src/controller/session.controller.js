@@ -3,7 +3,8 @@ import { addSession, fetchSession } from '../services/session.service.js';
 
 /**
  * POST /join
- * Body: { joinCode, nickname, userId }
+ * Body: { joinCode, nickname, userId (optional) }
+ * Returns: session and participant info
  */
 export async function joinSessionController(req, res) {
   try {
@@ -31,8 +32,11 @@ export async function joinSessionController(req, res) {
   }
 }
 
-/**
- * GET /:sessionId/status
+/** GET /session/:sessionId/status
+ * Returns session status
+ * @param {Object} req
+ * @param {Object} res
+ * @returns {Object} response
  */
 export async function sessionStatusController(req, res) {
   try {
@@ -67,6 +71,11 @@ export async function sessionStatusController(req, res) {
   }
 }
 
+/** Create a new session
+ * @param {Object} req
+ * @param {Object} res
+ * @returns {Object} response
+ */
 export async function createSessionController(req, res) {
   try {
     const teacherId = req.user.id; // assuming JWT middleware sets req.user
@@ -80,6 +89,11 @@ export async function createSessionController(req, res) {
   }
 }
 
+/** Get session details
+ * @param {Object} req
+ * @param {Object} res
+ * @returns {Object} response
+ */
 export async function getSessionController(req, res) {
   try {
     const { sessionId } = req.params;

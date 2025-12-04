@@ -1,7 +1,10 @@
 import { SignUp,Login,verifyEmail } from "../services/auth.service.js";
 
 /**
- * Controller for Host Signup
+ * Controller for Host Sign Up
+ * @param {Object} req
+ * @param {Object} res
+ * @return {Object} response
 **/
 export async function userSignUp(req,res){
     try{
@@ -19,6 +22,9 @@ export async function userSignUp(req,res){
 
 /**
  * Controller for Host Login
+ * @param {Object} req
+ * @param {Object} res
+ * @return {Object} response
 **/
 
 export async function userLogin(req,res){
