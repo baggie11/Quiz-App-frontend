@@ -76,9 +76,7 @@ const QuizVision: React.FC = () => {
                     <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-[#2563eb] bg-clip-text text-transparent">
                       QuizVision
                     </h1>
-                    <p className="text-xs text-gray-500">
-                      Accessible Learning Platform
-                    </p>
+                 
                   </div>
                 </div>
 
