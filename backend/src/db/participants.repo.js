@@ -1,6 +1,15 @@
 import { supabase } from "./index.js";
 import {v4 as uuidv4} from 'uuid';
 
+/**
+ * Create a new participant in a session
+ * @param {Object} params
+ * @param {String} params.sessionId
+ * @param {String} params.nickname
+ * @param {String|null} params.userId
+ * @param {String} params.avatarColor
+ * @returns Participant Object
+**/
 export async function createParticipant({sessionId, nickname,userId = null,avatarColor = '#3B82F6'}){
     const {data, error} = await supabase
     .from('participants')
@@ -22,6 +31,13 @@ export async function createParticipant({sessionId, nickname,userId = null,avata
     if (error) throw new Error(error.message);
     return data;
 }
+
+/**
+ * Get participant by nickname in a session
+ * @param {String} sessionId
+ * @param {String} nickname
+ * @returns Participant Object or null
+**/
 
 export async function getParticipantByNickName(sessionId,nickname){
     const {data,error} = await supabase

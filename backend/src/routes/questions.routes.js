@@ -1,13 +1,11 @@
 import express from 'express';
-import {
-    addQuestionController,
-    listQuestionsController
-} from '../controllers/question.controller.js';
+import { addQuestionsController, listQuestionsController } from '../controller/questions.controller.js';
+
 
 const router = express.Router({ mergeParams: true });
 
 // POST /sessions/:sessionId/questions → Add question
-router.post('/', addQuestionController);
+router.post('/', addQuestionsController);
 
 // GET /sessions/:sessionId/questions → List questions
 router.get('/', listQuestionsController);

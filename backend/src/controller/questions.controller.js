@@ -1,4 +1,4 @@
-import { addQuestionsToSession, listQuestions } from '../services/question.service.js';
+import { addQuestionsToSession, listQuestions } from '../services/questions.service.js';
 
 /**
  * Add multiple questions to a session

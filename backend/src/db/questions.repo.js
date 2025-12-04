@@ -1,7 +1,9 @@
 import { supabase } from './index.js';
 
 /**
- * Get a single question by its ID
+ * Get a question by its ID
+ * @param {string} questionId
+ * @returns {Promise<Object>} question object
  */
 export async function getQuestionById(questionId) {
   const { data, error } = await supabase
@@ -14,9 +16,10 @@ export async function getQuestionById(questionId) {
   return data;
 }
 
-/**
- * Insert MULTIPLE questions for a session
- * questionsData = array of question objects
+/** Create multiple questions for a session
+ * @param {string} sessionId
+ * @param {Array<Object>} questionsData
+ * @returns {Promise<Array<Object>>} created questions
  */
 export async function createQuestions(sessionId, questionsData) {
   const payload = questionsData.map((q, index) => ({
@@ -41,8 +44,9 @@ export async function createQuestions(sessionId, questionsData) {
   return data;
 }
 
-/**
- * Get all questions in a session
+/** List all questions for a session
+ * @param {string} sessionId
+ * @returns {Promise<Array<Object>>} list of questions
  */
 export async function listQuestions(sessionId) {
   const { data, error } = await supabase
