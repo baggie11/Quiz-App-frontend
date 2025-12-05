@@ -63,14 +63,14 @@ const HostLogin: React.FC<HostLoginProps> = ({ toggleToSignup }) => {
         {/* Username/Email */}
         <div>
           <label className="text-sm font-medium text-gray-800 mb-2 block">
-            Username / Email
+            Email
           </label>
           <div className="relative">
             <input
               type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your username or email"
+              placeholder="Enter your email"
               className="w-full px-6 py-4 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none"
             />
           </div>
