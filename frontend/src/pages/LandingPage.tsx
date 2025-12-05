@@ -2,6 +2,8 @@
 import React, { useState} from 'react';
 import {speak} from '../services/speech/tts.ts';
 import type { ChangeEvent } from 'react';   
+import Navbar from '../components/Navbar.tsx';
+import Footer from '../components/Footer.tsx';
 import { 
   Mic, 
   Headphones, 
@@ -60,76 +62,7 @@ const QuizVision: React.FC = () => {
 
   return (
     <div className="min-h-screen transition-all duration-300 bg-white">
-      
-      {/* Header with subtle accent */}
-      <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/95 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo and Brand */}
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-6">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-[#2563eb] to-[#3b82f6] rounded-xl flex items-center justify-center shadow-sm">
-                    <span className="text-white font-bold text-sm">QV</span>
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-[#2563eb] bg-clip-text text-transparent">
-                      QuizVision
-                    </h1>
-                 
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="h-8 w-px bg-gray-200"></div>
-
-                {/* Organization Logos */}
-                <div className="flex items-center space-x-6">
-
-                {/* MeitY + SSN */}
-                <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center overflow-hidden">
-                    <img 
-                        src="/images/ssn-logo.png" 
-                        alt="MeitY Logo" 
-                        className="w-full h-full object-contain p-1"
-                    />
-                    </div>
-                    <div>
-                    </div>
-                </div>
-
-                {/* NPTEL */}
-                <div className="flex items-center space-x-3">
-                    <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center  overflow-hidden">
-                    <img 
-                        src="/images/meity.png" 
-                        alt="NPTEL Logo" 
-                        className="w-full h-full object-contain p-1"
-                    />
-                    </div>
-                    <div>
-                    </div>
-                </div>
-
-                </div>
-
-              </div>
-            </div>
-
-            {/* Host Login Button */}
-            <button 
-              className="px-5 py-2.5 bg-gradient-to-r from-[#2563eb] to-[#3b82f6] hover:from-[#1d4ed8] hover:to-[#2563eb] text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center space-x-2 group"
-              onClick={() => alert('Host Login clicked')}
-              onFocus={() => speak("Host Login")}
-            >
-              <LogIn size={18} className="group-hover:translate-x-0.5 transition-transform" />
-              <span className="text-sm">Host Login</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
+      <Navbar/>
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-6 py-8">
         
@@ -237,52 +170,7 @@ const QuizVision: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="mt-12 border-t border-gray-200 bg-white">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-6 md:space-y-0">
-            {/* Branding */}
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-[#2563eb] to-[#3b82f6] rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold">QV</span>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">
-                  QuizVision • National Language Translation Mission
-                </p>
-                <p className="text-xs text-gray-600">
-                  An initiative by the Government of India
-                </p>
-              </div>
-            </div>
-
-            {/* Links */}
-            <div className="flex items-center space-x-6">
-              <a href="#" className="text-sm text-gray-600 hover:text-[#2563eb] transition-colors">
-                Privacy Policy
-              </a>
-              <a href="#" className="text-sm text-gray-600 hover:text-[#2563eb] transition-colors">
-                Terms of Service
-              </a>
-              <a href="#" className="text-sm text-gray-600 hover:text-[#2563eb] transition-colors">
-                Accessibility Statement
-              </a>
-              <a href="#" className="text-sm text-gray-600 hover:text-[#2563eb] transition-colors">
-                Contact
-              </a>
-            </div>
-
-            {/* Copyright */}
-            <div className="text-center md:text-right">
-              <p className="text-sm text-gray-600">
-                © {new Date().getFullYear()} National Language Translation Mission
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                WCAG AA+ Compliant • ISO 27001 Certified
-              </p>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer/>
     </div>
   );
 };

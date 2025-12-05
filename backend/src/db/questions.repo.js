@@ -48,7 +48,7 @@ export async function createQuestions(sessionId, questionsData) {
  * @param {string} sessionId
  * @returns {Promise<Array<Object>>} list of questions
  */
-export async function listQuestions(sessionId) {
+export async function getQuestionsBySession(sessionId) {
   const { data, error } = await supabase
     .from('questions')
     .select('*')

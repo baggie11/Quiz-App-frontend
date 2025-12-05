@@ -1,7 +1,7 @@
 import express from 'express';
 import { joinSessionController, createSessionController, getSessionController} from '../controller/session.controller.js';
 import { sessionStatusController } from '../controller/session.controller.js';
-import {questionRoutes} from './questions.routes.js';
+import questionRoutes from './questions.routes.js';
 
 // Mount under sessions
 // e.g., POST /api/sessions/:sessionId/questions

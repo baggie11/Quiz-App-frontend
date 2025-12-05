@@ -1,4 +1,4 @@
-import { createQuestions, getQuestionsBySession } from '../db/questions.repo.js';
+import { createQuestions, getQuestionsBySession} from '../db/questions.repo.js';
 
 /**
  * Add multiple questions to a session
