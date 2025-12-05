@@ -1,7 +1,7 @@
 import { getUserByEmail, createUser, updateUser } from "../db/users.repo.js";
 import { hashPassword,verifyPassword } from "../utils/password.utils.js";
 import jwt from 'jsonwebtoken';
-import { sendVerificationEmail, generateVerificationToken } from "../utils/email.util.js";
+//import { sendVerificationEmail, generateVerificationToken } from "../utils/email.util.js";
 import 'dotenv/config';
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -17,8 +17,8 @@ export async function SignUp(email,password,fullName) {
     // get the password hash and the salt
     const {hash,salt} = await hashPassword(password);
 
-    const verificationToken = generateVerificationToken();
-    const tokenExpiry  = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    //const verificationToken = generateVerificationToken();
+    //const tokenExpiry  = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
 
     const user = await createUser({
@@ -27,11 +27,11 @@ export async function SignUp(email,password,fullName) {
         salt,
         full_name: fullName,
         email_verified : true,
-        verification_token: verificationToken,
-        verification_token_expires: tokenExpiry,
+        //verification_token: verificationToken,
+        //verification_token_expires: tokenExpiry,
     });
 
-    await sendVerificationEmail(email,verificationToken);
+    //await sendVerificationEmail(email,verificationToken);
 
     return {message : 'Signup successful. Please verify your email',userId: user.id};
 }
@@ -61,7 +61,7 @@ export async function verifyEmail(email,token){
     if (!user) throw new Error('Invalid email');
     
     if(user.email_verified) throw new Error("Email already verified");
-    if (user.verification_token !== token) throw new Error("Invalid token");
+    //if (user.verification_token !== token) throw new Error("Invalid token");
     if (new Date(user.verification_token_expires) < new Date()) throw new Error('Token expired');
 
     await updateUser(user.id,{

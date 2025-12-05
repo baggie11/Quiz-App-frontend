@@ -4,6 +4,7 @@ import {supabase} from './db/index.js';
 import {testConnection} from './db/index.js';
 import authRoutes from './routes/auth.routes.js';
 import sessionRoutes from './routes/session.routes.js';
+import cors from 'cors';
 
 const app = express();
 // Port configuration
@@ -11,6 +12,14 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware to parse JSON
 app.use(express.json());
+
+app.use(
+  cors({
+    origin: "*",      // allow all origins (remove * in production)
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 //Routes
 app.use('/api/auth',authRoutes);

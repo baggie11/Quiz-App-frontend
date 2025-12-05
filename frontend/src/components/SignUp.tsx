@@ -9,9 +9,6 @@ const HostSignup: React.FC<HostSignupProps> = ({ toggleToLogin }) => {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
-    username: "",
-    phone: "",
-    organization: "",
     password: "",
     confirmPassword: ""
   });
@@ -23,10 +20,10 @@ const HostSignup: React.FC<HostSignupProps> = ({ toggleToLogin }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSignup = () => {
-    const { fullName, email, username, phone, password, confirmPassword } = formData;
+  const handleSignup = async() => {
+    const { fullName, email, password, confirmPassword } = formData;
     
-    if (!fullName || !email || !username || !phone || !password || !confirmPassword) {
+    if (!fullName || !email || !password || !confirmPassword) {
       alert("Please fill all required fields");
       return;
     }
@@ -41,7 +38,30 @@ const HostSignup: React.FC<HostSignupProps> = ({ toggleToLogin }) => {
       return;
     }
 
-    alert(`Signup successful for ${fullName}! Check your email to verify your account.`);
+    //send the data to the backend
+    try{
+        const response = await fetch(`http://localhost:3000/api/auth/user/signup`,{
+            method : "POST",
+            headers : {
+                "Content-Type" : "application/json",
+            },
+            body : JSON.stringify({
+                fullName,
+                email,
+                password,
+            }),
+        });
+
+        const data = await response.json();
+        if (!response.ok){
+            alert(data.message || "Signup failed");
+            return;
+        }
+        alert("Signup successful");
+    }catch(error){
+        console.error("Signup error:",error);
+        alert("Please try again later.")
+    }
   };
 
   return (

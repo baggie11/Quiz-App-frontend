@@ -17,10 +17,11 @@ const Navbar: React.FC = () => {
                 <div className="w-10 h-10 bg-gradient-to-br from-[#2563eb] to-[#3b82f6] rounded-xl flex items-center justify-center shadow-sm">
                   <span className="text-white font-bold text-sm">QV</span>
                 </div>
-
+                <Link to = "/">
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-[#2563eb] bg-clip-text text-transparent">
                   QuizVision
                 </h1>
+                </Link>
               </div>
 
               {/* Divider */}

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState} from "react";
+import { useNavigate } from "react-router-dom";
 import { LogIn, Lock, User, Eye, EyeOff, Mail } from "lucide-react";
 
 interface HostLoginProps {
@@ -6,16 +7,42 @@ interface HostLoginProps {
 }
 
 const HostLogin: React.FC<HostLoginProps> = ({ toggleToSignup }) => {
-  const [username, setUsername] = useState("");
+  const [email,setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
-  const handleLogin = () => {
-    if (!username || !password) {
+  const navigate = useNavigate();
+  const handleLogin = async() => {
+    if (!email || !password) {
       alert("Please fill all fields");
       return;
     }
-    alert(`Logging in as ${username}`);
+    //send login details to the backend
+    try{
+        const res = await fetch('http://localhost:3000/api/auth/user/login',{
+            method : "POST",
+            headers : {
+                "Content-Type" : "application/json",
+            },
+            body : JSON.stringify({email,password}),
+        });
+
+        if (!res.ok){
+            const err = await res.json();
+            throw new Error(err.message || "Login failed");
+        }
+
+        const data = await res.json(); // {token,user}
+
+        localStorage.setItem("token",data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+        console.log("Login success");
+        //navigate after login
+        //navigate("/dashboard");
+    }catch(err: any){
+        console.log(err.message);
+    }finally{
+        console.log("loaded");
+    }
   };
 
   return (
@@ -41,8 +68,8 @@ const HostLogin: React.FC<HostLoginProps> = ({ toggleToSignup }) => {
           <div className="relative">
             <input
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your username or email"
               className="w-full px-6 py-4 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none"
             />

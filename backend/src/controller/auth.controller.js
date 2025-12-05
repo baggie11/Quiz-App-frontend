@@ -1,4 +1,4 @@
-import { SignUp,Login,verifyEmail } from "../services/auth.service.js";
+import { SignUp,Login} from "../services/auth.service.js";
 
 /**
  * Controller for Host Sign Up

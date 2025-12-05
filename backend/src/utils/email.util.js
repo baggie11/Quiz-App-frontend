@@ -5,7 +5,7 @@ import crypto from 'crypto';
  * Generate a cryptographically secure verification token
  * @param {number} size - number of bytes(default 32)
  * @returns {string} hex token
-**/
+
 export function generateVerificationToken(size = 32){
     return crypto.randomBytes(size).toString('hex');
 }
@@ -29,3 +29,5 @@ export async function sendVerificationEmail(email,token) {
         html: `<p>Click <a href="${verificationUrl}">here</a> to verify your email. Expires in 24 hours.</p>`,
     });
 }
+
+**/
