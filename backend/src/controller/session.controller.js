@@ -80,7 +80,6 @@ export async function createSessionController(req, res) {
   try {
     const teacherId = req.user.id; // assuming JWT middleware sets req.user
     const sessionData = req.body;
-
     const session = await addSession(teacherId, sessionData);
 
     return res.status(201).json({ status: 'ok', data: session });

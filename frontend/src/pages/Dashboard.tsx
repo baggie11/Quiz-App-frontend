@@ -1,4 +1,4 @@
-import React, { useState, type ChangeEvent, type FormEvent } from 'react';
+import React, { createContext, useContext, useState, type ChangeEvent, type FormEvent, useEffect } from 'react';
 import { 
   Brain,
   Menu,
@@ -235,30 +235,71 @@ const CreateSessionForm: React.FC = () => {
     startTime: '',
     endDate: '',
     endTime: '',
-    visibility: 'private',
-    accessCode: '',
-    showAccessCode: false
   });
+
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async(e: FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    // Handle form submission
+    setError(null);
+    setSuccess(null);
+
+    try{
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        const scheduled_start = formData.startDate && formData.startTime
+        ? new Date(`${formData.startDate}T${formData.startTime}`).toISOString()
+        : null;
+
+      const ended_at = formData.endDate && formData.endTime
+        ? new Date(`${formData.endDate}T${formData.endTime}`).toISOString()
+        : null;
+
+        //prepare payload
+        const payload = {
+            title : formData.sessionName,
+            scheduled_start,
+            ended_at,
+        }
+
+        //call backend api
+        const response = await fetch('http://localhost:3000/api/session',{
+            method : 'POST',
+            headers : {
+                'Content-Type' : 'application/json',
+                'Authorization' : `Bearer ${token}`,
+            },
+            body : JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.status == "ok"){
+            setSuccess("Session created successfully");
+            console.log("Created session",data.data);
+        }else{
+            setError(data.message || "Failed to create session");
+        }
+
+        //combine date + time into ISO strings
+
+    }catch(err:  any){
+        console.error(err);
+        setError(err.message || 'Something went wrong.');
+    }finally {
+    setLoading(false);
+  }
   };
 
-  const generateAccessCode = () => {
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    setFormData(prev => ({ ...prev, accessCode: code }));
-  };
 
-  const toggleAccessCodeVisibility = () => {
-    setFormData(prev => ({ ...prev, showAccessCode: !prev.showAccessCode }));
-  };
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -426,25 +467,71 @@ const CreateSessionForm: React.FC = () => {
   );
 };
 
+interface User{
+    email : string;
+}
+
+interface AuthContextProps{
+    user : User | null;
+    token : string | null;
+    loading : boolean;
+}
+
+const AuthContext = createContext<AuthContextProps>({
+    user : null,
+    token : null,
+    loading : true,
+})
 // Main Dashboard Component
 const Dashboard: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    const storedToken = localStorage.getItem("token");
+
+    if (storedUser && storedToken) {
+      setUser(JSON.parse(storedUser));
+      setToken(storedToken);
+    }
+
+    setLoading(false);
+  }, []); // <-- FIXED (runs only once)
+
+  // ⛔ Still loading → show loading screen
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-lg">
+        Checking authorization...
+      </div>
+    );
+  }
+
+  // ⛔ Not authorized → show message
+  if (!user || !token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-xl font-semibold text-red-600">
+        ❌ Not authorized to access this page
+      </div>
+    );
+  }
+
+  // ✅ Authorized → Show Dashboard
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex">
-        {/* Sidebar */}
-        <Sidebar 
-          isOpen={sidebarOpen} 
-          onClose={() => setSidebarOpen(false)} 
-        />
         
-        {/* Main Content */}
+        <Sidebar 
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+
         <div className="flex-1 flex flex-col min-h-screen">
-          {/* Top Bar */}
           <TopBar onMenuClick={() => setSidebarOpen(true)} />
-          
-          {/* Main Content Area */}
+
           <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
             <CreateSessionForm />
           </main>

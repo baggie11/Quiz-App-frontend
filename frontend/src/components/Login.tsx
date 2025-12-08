@@ -37,7 +37,7 @@ const HostLogin: React.FC<HostLoginProps> = ({ toggleToSignup }) => {
         localStorage.setItem("user", JSON.stringify(data.user));
         console.log("Login success");
         //navigate after login
-        //navigate("/dashboard");
+        navigate("/dashboard");
     }catch(err: any){
         console.log(err.message);
     }finally{

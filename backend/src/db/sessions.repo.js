@@ -1,4 +1,5 @@
 import {supabase} from './index.js';
+import {generateUniqueJoinCode} from '../utils/joinCode.js'; 
 
 /**
  * Get session by join code
@@ -39,19 +40,22 @@ export async function getSessionById(sessionId){
  * @returns {Promise<Object>} created session
  */
 export async function createSession(teacherId, sessionData) {
-  const { title, description, scheduled_start, settings } = sessionData;
+  const { title, scheduled_start, ended_at} = sessionData;
+  const join_code = await generateUniqueJoinCode(4);
+
+  console.log(join_code);
 
   const { data, error } = await supabase
     .from('sessions')
     .insert([{
       teacher_id: teacherId,
       title,
-      description,
       scheduled_start: scheduled_start || null,
-      settings: settings || {},
+      ended_at: ended_at || null,
+      join_code,
       status: 'draft'
     }])
-    .select()
+    .select('id, title, scheduled_start, started_at, ended_at, join_code')
     .maybeSingle();
 
   if (error) throw new Error(error.message);

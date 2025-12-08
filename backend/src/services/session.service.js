@@ -83,7 +83,8 @@ export async function getSessionStatus(sessionId) {
 }
 
 export async function addSession(teacherId, sessionData) {
-  if (!sessionData.title) throw new Error('Session title is required');
+  const {title, scheduled_start, ended_at} = sessionData;
+  if (!title) throw new Error('Session title is required');
 
   const session = await createSession(teacherId, sessionData);
   return session;
