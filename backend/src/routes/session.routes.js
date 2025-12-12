@@ -1,6 +1,6 @@
 import express from 'express';
 import { joinSessionController, createSessionController, getSessionController} from '../controller/session.controller.js';
-import { sessionStatusController } from '../controller/session.controller.js';
+import { sessionStatusController, getSessionsByTeacher } from '../controller/session.controller.js';
 import questionRoutes from './questions.routes.js';
 import {authMiddleware} from '../middleware/authmiddleware.js';
 
@@ -15,6 +15,7 @@ router.get('/:sessionId/status',sessionStatusController);
 router.post('/:sessionId/questions', questionRoutes);
 // Create a new session (teacher only)
 router.post('/', authMiddleware, createSessionController);
+router.get("/",authMiddleware,getSessionsByTeacher);
 
 // Get session by ID
 router.get('/:sessionId', getSessionController);

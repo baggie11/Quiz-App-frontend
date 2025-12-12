@@ -202,21 +202,11 @@ const TopBar: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
             <Menu size={24} className="text-gray-700" />
           </button>
           
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              type="search"
-              placeholder="Search sessions, questions..."
-              className="pl-10 pr-4 py-2 w-64 lg:w-80 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-            />
-          </div>
+        
         </div>
 
         <div className="flex items-center space-x-4">
-          <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
-            <Bell size={22} className="text-gray-700" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-          </button>
+         
           
           <div className="hidden lg:block h-6 w-px bg-gray-300" />
           
@@ -471,30 +461,32 @@ const AllSessionsPage: React.FC<AllSessionsPageProps> = ({ sessions, setSessions
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchSessions = async () => {
-      try {
+    const fetchSessions = async() => {
+      try{
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:3000/api/session', {
-          headers: { Authorization: `Bearer ${token}` },
+        
+        const response = await fetch(`http://localhost:3000/api/session`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
         });
-        const data = await res.json();
-        if (res.ok) setSessions(data.data || []);
-      } catch (err) {
-        console.error(err);
-      } finally {
+        const json = await response.json();
+
+        if (response.ok && json.success) {
+          setSessions(json.sessions);
+        }else{
+          console.error("Failed to fetch sessions:", json.message);
+        }
+      }catch(err){
+        console.error("Error fetching sessions:", err);
+      }finally{
         setLoading(false);
       }
     };
     fetchSessions();
-  }, []);
-
-  const handleChange = (id: number, field: string, value: string) => {
-    setSessions(prev =>
-      prev.map(session =>
-        session.id === id ? { ...session, [field]: value } : session
-      )
-    );
-  };
+  },[setSessions]);
 
   if (loading) return <div className="text-center py-20 text-gray-500">Loading sessions...</div>;
   if (!sessions.length) return <div className="text-center py-20 text-gray-500">No sessions found</div>;

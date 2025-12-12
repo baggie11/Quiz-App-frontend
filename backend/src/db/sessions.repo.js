@@ -62,4 +62,22 @@ export async function createSession(teacherId, sessionData) {
   return data;
 }
 
+/**
+ * Get all sessions created by a teacher
+ * @param {string} teacherId
+ * @returns {Promise<Array>} list of sessions
+ */
+
+export async function getSessionsByTeacherId(teacherId){
+  const {data , error} = await supabase
+  .from('sessions')
+  .select('*')
+  .eq('teacher_id',teacherId)
+  .order('scheduled_start',{ascending : False});
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+
 

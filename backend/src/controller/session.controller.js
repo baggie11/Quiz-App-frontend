@@ -1,6 +1,6 @@
 import { joinSession, getSessionStatus } from "../services/session.service.js";
 import { addSession, fetchSession } from '../services/session.service.js';
-
+import { listTeacherSessions } from "../services/session.service.js";
 /**
  * POST /join
  * Body: { joinCode, nickname, userId (optional) }
@@ -101,5 +101,27 @@ export async function getSessionController(req, res) {
   } catch (err) {
     if (err.message === 'Session not found') return res.status(404).json({ status: 'fail', message: err.message });
     return res.status(500).json({ status: 'error', message: err.message });
+  }
+}
+
+
+/**
+ * GET /sessions/teacher/:teacherId
+ */
+export async function getSessionsByTeacher(req,res){
+  try{
+    const {teacherId} = req.params;
+
+    const sessions = await listTeacherSessions(teacherId);
+    
+    return res.status(200).json({
+      success : true,
+      sessions,
+    });
+  }catch(err){
+    return res.status(500).json({
+      success : false,
+      message : err.message,
+    });
   }
 }

@@ -1,4 +1,4 @@
-import { getSessionByJoinCode, getSessionById, createSession } from "../db/sessions.repo.js";
+import { getSessionByJoinCode, getSessionById, createSession, getSessionsByTeacherId } from "../db/sessions.repo.js";
 import { createParticipant, getParticipantByNickName } from "../db/participants.repo.js";
 import { logActivity, getLatestQuestionStart } from "../db/session_activity.repo.js";
 import { getQuestionById } from "../db/questions.repo.js";
@@ -94,4 +94,18 @@ export async function fetchSession(sessionId) {
   const session = await getSessionById(sessionId);
   if (!session) throw new Error('Session not found');
   return session;
+}
+
+/**
+ * Get all sessions created by a teacher
+ * @param {string} teacherId
+ * @returns {Promise<Array>}
+ */
+export async function listTeacherSessions(teacherId){
+  if (!teacherId){
+    throw new Error("Teacher ID is required");
+  }
+
+  const sessions = await getSessionsByTeacherId(teacherId);
+  return sessions;
 }
