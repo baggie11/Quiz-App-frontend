@@ -15,7 +15,7 @@ router.get('/:sessionId/status',sessionStatusController);
 router.post('/:sessionId/questions', questionRoutes);
 // Create a new session (teacher only)
 router.post('/', authMiddleware, createSessionController);
-router.get("/",authMiddleware,getSessionsByTeacher);
+router.get('/',authMiddleware,getSessionsByTeacher);
 
 // Get session by ID
 router.get('/:sessionId', getSessionController);

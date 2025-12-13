@@ -82,12 +82,16 @@ export async function getSessionStatus(sessionId) {
   };
 }
 
-export async function addSession(teacherId, sessionData) {
-  const {title, scheduled_start, ended_at} = sessionData;
-  if (!title) throw new Error('Session title is required');
+export async function addSession(teacherId, sessionData){
+  if (!sessionData.title || !sessionData.title.trim()){
+    throw new Error("Session title is required");
+  } 
 
-  const session = await createSession(teacherId, sessionData);
-  return session;
+  if (!sessionData.duration || sessionData.duration <=0 ){
+    throw new Error('Duration (minutes) must be greater than 0');
+  }
+
+  return await createSession(teacherId, sessionData);
 }
 
 export async function fetchSession(sessionId) {
@@ -105,7 +109,6 @@ export async function listTeacherSessions(teacherId){
   if (!teacherId){
     throw new Error("Teacher ID is required");
   }
-
   const sessions = await getSessionsByTeacherId(teacherId);
   return sessions;
 }

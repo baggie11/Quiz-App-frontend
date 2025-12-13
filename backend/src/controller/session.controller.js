@@ -76,15 +76,22 @@ export async function sessionStatusController(req, res) {
  * @param {Object} res
  * @returns {Object} response
  */
-export async function createSessionController(req, res) {
-  try {
-    const teacherId = req.user.id; // assuming JWT middleware sets req.user
+export async function createSessionController(req,res){
+  try{
+    const teacherId = req.user.id;
     const sessionData = req.body;
+
     const session = await addSession(teacherId, sessionData);
 
-    return res.status(201).json({ status: 'ok', data: session });
-  } catch (err) {
-    return res.status(400).json({ status: 'fail', message: err.message });
+    return res.status(201).json({
+      status : 'ok',
+      data : session,
+    });
+  }catch(err){
+    return res.status(400).json({
+      success : false,
+      message : err.message,
+    });
   }
 }
 
@@ -106,11 +113,11 @@ export async function getSessionController(req, res) {
 
 
 /**
- * GET /sessions/teacher/:teacherId
+ * GET /
  */
 export async function getSessionsByTeacher(req,res){
   try{
-    const {teacherId} = req.params;
+    const teacherId = req.user.id;
 
     const sessions = await listTeacherSessions(teacherId);
     

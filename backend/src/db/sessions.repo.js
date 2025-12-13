@@ -39,27 +39,43 @@ export async function getSessionById(sessionId){
  * @param {Object} sessionData
  * @returns {Promise<Object>} created session
  */
-export async function createSession(teacherId, sessionData) {
-  const { title, scheduled_start, ended_at} = sessionData;
-  const join_code = await generateUniqueJoinCode(4);
+export async function createSession(teacherId,sessionData){
+  const {
+    title,
+    start_date = null,
+    end_date = null,
+    duration,
+    is_draft = true,
+  } = sessionData;
 
-  console.log(join_code);
+  const join_code = await generateUniqueJoinCode();
 
-  const { data, error } = await supabase
-    .from('sessions')
-    .insert([{
-      teacher_id: teacherId,
+  const {data,error} = await supabase
+  .from('sessions')
+  .insert([{
+    teacher_id : teacherId,
+    title,
+    start_date,
+    end_date,
+    duration_minutes : duration,
+    is_draft,
+    join_code,
+  }])
+  .select(`
+    id,
+      teacher_id,
       title,
-      scheduled_start: scheduled_start || null,
-      ended_at: ended_at || null,
       join_code,
-      status: 'draft'
-    }])
-    .select('id, title, scheduled_start, started_at, ended_at, join_code')
-    .maybeSingle();
+      start_date,
+      end_date,
+      duration_minutes,
+      is_draft,
+      created_at
+    `)
+    .single();
 
-  if (error) throw new Error(error.message);
-  return data;
+    if (error) throw new Error(error.message);
+    return data;
 }
 
 /**
@@ -72,8 +88,7 @@ export async function getSessionsByTeacherId(teacherId){
   const {data , error} = await supabase
   .from('sessions')
   .select('*')
-  .eq('teacher_id',teacherId)
-  .order('scheduled_start',{ascending : False});
+  .eq('teacher_id',teacherId);
 
   if (error) throw new Error(error.message);
   return data;
