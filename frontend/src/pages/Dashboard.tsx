@@ -20,6 +20,7 @@ import {
   Calendar as CalendarIcon,
   Tag
 } from 'lucide-react';
+import {  Hash, CheckCircle } from 'lucide-react';
 
 // User Account Dropdown Component
 const UserAccountDropdown: React.FC = () => {
@@ -111,11 +112,12 @@ const Sidebar: React.FC<{
 
       <aside
         className={`
-          fixed lg:static inset-y-0 left-0 z-40
+          fixed inset-y-0 left-0 z-40
           w-64 bg-white border-r border-gray-200
           transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
-          lg:translate-x-0 transition-transform duration-300 ease-in-out
-          flex flex-col h-screen
+          lg:translate-x-0
+          transition-transform duration-300 ease-in-out
+          flex flex-col
         `}
       >
         {/* Logo */}
@@ -137,7 +139,13 @@ const Sidebar: React.FC<{
             {menuItems.map((item) => (
               <li key={item.id}>
                 <button
-                  onClick={() => setActivePage(item.id)}
+                  onClick={() => {
+                    setActivePage(item.id);
+                    // Close sidebar on mobile after selection
+                    if (window.innerWidth < 1024) {
+                      onClose();
+                    }
+                  }}
                   className={`
                     w-full flex items-center space-x-3 px-4 py-3 rounded-xl
                     transition-all duration-200
@@ -185,6 +193,88 @@ const Sidebar: React.FC<{
         </div>
       </aside>
     </>
+  );
+};
+
+// Dashboard Component - Updated
+const Dashboard: React.FC = () => {
+  type UserType = {
+    name: string;
+    email: string;
+    role?: string;
+  };
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState<UserType | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activePage, setActivePage] = useState("new-session");
+  const [sessions, setSessions] = useState<any[]>([]);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    const storedToken = localStorage.getItem("token");
+
+    if (storedUser && storedToken) {
+      setUser(JSON.parse(storedUser));
+      setToken(storedToken);
+    }
+    setLoading(false);
+  }, []);
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-lg">Checking authorization...</div>;
+  if (!user || !token) return <div className="min-h-screen flex items-center justify-center text-xl font-semibold text-red-600">❌ Not authorized to access this page</div>;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="flex">
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          activePage={activePage}
+          setActivePage={setActivePage}
+        />
+
+        {/* Main content area with fixed sidebar spacing */}
+        <div className="flex-1 min-h-screen lg:ml-64">
+          <TopBar onMenuClick={() => setSidebarOpen(true)} />
+          
+          {/* Scrollable main content */}
+          <main className="p-4 lg:p-8 h-[calc(100vh-64px)] overflow-y-auto">
+            {(activePage === "dashboard" || activePage === "new-session") && 
+              <CreateSessionForm addSession={(newSession) => setSessions(prev => [newSession, ...prev])} />
+            }
+            {activePage === "sessions" && <AllSessionsPage sessions={sessions} setSessions={setSessions} />}
+            
+            {/* Add placeholder content for other pages */}
+            {activePage === "questions" && (
+              <div className="max-w-4xl mx-auto">
+                <h1 className="text-3xl font-bold text-gray-900 mb-6">Question Bank</h1>
+                <p className="text-gray-600">Question bank page content goes here...</p>
+              </div>
+            )}
+            {activePage === "participants" && (
+              <div className="max-w-4xl mx-auto">
+                <h1 className="text-3xl font-bold text-gray-900 mb-6">Participants</h1>
+                <p className="text-gray-600">Participants page content goes here...</p>
+              </div>
+            )}
+            {activePage === "analytics" && (
+              <div className="max-w-4xl mx-auto">
+                <h1 className="text-3xl font-bold text-gray-900 mb-6">Analytics</h1>
+                <p className="text-gray-600">Analytics page content goes here...</p>
+              </div>
+            )}
+            {activePage === "settings" && (
+              <div className="max-w-4xl mx-auto">
+                <h1 className="text-3xl font-bold text-gray-900 mb-6">Settings</h1>
+                <p className="text-gray-600">Settings page content goes here...</p>
+              </div>
+            )}
+          </main>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -459,6 +549,36 @@ interface AllSessionsPageProps {
 
 const AllSessionsPage: React.FC<AllSessionsPageProps> = ({ sessions, setSessions }) => {
   const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  const filteredSessions = sessions.filter(session => {
+    if (filterStatus === 'all') return true;
+    const status = getSessionStatus(session);
+    return status.text.toLowerCase().replace(' ', '') === filterStatus;
+  });
+
+  const getSessionStatus = (session: any) => {
+    const now = new Date();
+    const start = session.scheduled_start ? new Date(session.scheduled_start) : null;
+    const end = session.ended_at ? new Date(session.ended_at) : null;
+    
+    if (session.draft) {
+      return { text: 'Draft', color: 'bg-blue-100 text-blue-800', icon: '📝' };
+    }
+    if (!start) {
+      return { text: 'Not Scheduled', color: 'bg-gray-100 text-gray-800', icon: '⏳' };
+    }
+    if (end && now > end) {
+      return { text: 'Completed', color: 'bg-emerald-100 text-emerald-800', icon: '✅' };
+    }
+    if (now >= start && (!end || now <= end)) {
+      return { text: 'Live Now', color: 'bg-red-100 text-red-600', icon: '🔴' };
+    }
+    if (now < start) {
+      return { text: 'Upcoming', color: 'bg-amber-100 text-amber-800', icon: '' };
+    }
+    return { text: 'Active', color: 'bg-blue-100 text-blue-800', icon: '📊' };
+  };
 
   useEffect(() => {
     const fetchSessions = async() => {
@@ -468,7 +588,6 @@ const AllSessionsPage: React.FC<AllSessionsPageProps> = ({ sessions, setSessions
         const response = await fetch(`http://localhost:3000/api/session`, {
           method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
         });
@@ -488,116 +607,282 @@ const AllSessionsPage: React.FC<AllSessionsPageProps> = ({ sessions, setSessions
     fetchSessions();
   },[setSessions]);
 
-  if (loading) return <div className="text-center py-20 text-gray-500">Loading sessions...</div>;
+  const formatDateTime = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+   if (loading) return (
+    <div className="flex flex-col items-center justify-center min-h-[400px]">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2563eb] mb-4"></div>
+      <div className="text-lg text-gray-600">Loading sessions...</div>
+    </div>
+  );
   if (!sessions.length) return <div className="text-center py-20 text-gray-500">No sessions found</div>;
 
   return (
-    <div className="w-full mx-auto space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900 mb-3">All Sessions</h1>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {sessions.map((session: any) => (
-          <div
-            key={session.id}
-            className={`
-              h-28 p-3 rounded-xl border border-white/20 
-              bg-white/30 backdrop-blur-md shadow-sm 
-              hover:bg-gradient-to-r hover:from-indigo-200/40 hover:to-blue-200/40 
-              hover:text-white hover:shadow-lg transition-all duration-300
-              w-full relative
-            `}
-          >
-            {/* Draft Badge */}
-            {session.draft && (
-              <span className="absolute top-4 right-4 px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-100 rounded-full">
-                Draft
-              </span>
-            )}
-
-            {/* Session Name */}
-            <div className="mb-4 flex items-center space-x-2">
-              <span className="text-indigo-500 font-medium">Session Name:</span>
-              <span className="text-gray-900 font-semibold">{session.title}</span>
-            </div>
-
-            {/* Start & End Time */}
-            <div className="flex flex-col space-y-1">
-              <div className="mb-2 sm:mb-0">
-                <span className="text-indigo-500 font-medium">Starts:</span>
-                <span className="ml-2 text-gray-700">
-                  {session.scheduled_start
-                    ? new Date(session.scheduled_start).toLocaleString()
-                    : 'N/A'}
-                </span>
+    <div className="w-full mx-auto px-6 py-8">
+      {/* Header */}
+      <div className="mb-10">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-3">
+              All Sessions
+            </h1>
+            <p className="text-gray-600 text-lg">
+              {filteredSessions.length} session{filteredSessions.length !== 1 ? 's' : ''} • Total: {sessions.length}
+            </p>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <div className="relative">
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="appearance-none bg-white border border-gray-300 rounded-xl pl-4 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent"
+              >
+                <option value="all">All Status</option>
+                <option value="draft">Draft</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="livenow">Live Now</option>
+                <option value="completed">Completed</option>
+              </select>
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
-              
+            </div>
+            
+            <button className="px-4 py-2.5 bg-gradient-to-r from-[#2563eb] to-[#3b82f6] text-white rounded-xl font-medium hover:from-[#1d4ed8] hover:to-[#2563eb] transition-all shadow-sm hover:shadow">
+              + New Session
+            </button>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+            <div className="flex items-center justify-between">
               <div>
-                <span className="text-indigo-500 font-medium">Ends:</span>
-                <span className="ml-2 text-gray-700">
-                  {session.ended_at
-                    ? new Date(session.ended_at).toLocaleString()
-                    : 'N/A'}
-                </span>
+                <p className="text-sm text-gray-600">Total Sessions</p>
+                <p className="text-2xl font-bold text-gray-900">{sessions.length}</p>
+              </div>
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Hash className="text-[#2563eb]" size={20} />
               </div>
             </div>
           </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// ---------------- DASHBOARD ----------------
-const Dashboard: React.FC = () => {
-  type UserType = {
-    name: string;
-    email: string;
-    role?: string;
-  };
-
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user, setUser] = useState<UserType | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [activePage, setActivePage] = useState("new-session"); // default = new session
-  const [sessions, setSessions] = useState<any[]>([]); // NEW
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    const storedToken = localStorage.getItem("token");
-
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
-      setToken(storedToken);
-    }
-    setLoading(false);
-  }, []);
-
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-lg">Checking authorization...</div>;
-  if (!user || !token) return <div className="min-h-screen flex items-center justify-center text-xl font-semibold text-red-600">❌ Not authorized to access this page</div>;
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex">
-        <Sidebar
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          activePage={activePage}
-          setActivePage={setActivePage}
-        />
-
-        <div className="flex-1 flex flex-col min-h-screen">
-          <TopBar onMenuClick={() => setSidebarOpen(true)} />
-
-          <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
-            {(activePage === "dashboard" || activePage === "new-session") && 
-              <CreateSessionForm addSession={(newSession) => setSessions(prev => [newSession, ...prev])} />
-            }
-            {activePage === "sessions" && <AllSessionsPage sessions={sessions} setSessions={setSessions} />}
-          </main>
+          
+          <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Live Now</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {sessions.filter(s => getSessionStatus(s).text === 'Live Now').length}
+                </p>
+              </div>
+              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Upcoming</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {sessions.filter(s => getSessionStatus(s).text === 'Upcoming').length}
+                </p>
+              </div>
+              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Completed</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {sessions.filter(s => getSessionStatus(s).text === 'Completed').length}
+                </p>
+              </div>
+              <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                <CheckCircle className="text-emerald-600" size={20} />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Sessions Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredSessions.map((session: any) => {
+          const status = getSessionStatus(session);
+          
+          return (
+            <div
+              key={session.id}
+              className="group bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+            >
+              {/* Status Header */}
+              <div className={`px-4 py-3 ${status.color.replace('text-', '')} border-b border-gray-100`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-semibold">{status.icon} {status.text}</span>
+                  </div>
+                  {session.draft && (
+                    <span className="text-xs font-medium px-2 py-1 bg-white/80 rounded-full">
+                      Draft Mode
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Card Content */}
+              <div className="p-5">
+                {/* Session Title */}
+                <div className="mb-6">
+                  <div className="flex items-start mb-3">
+                    <div className="p-2 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg mr-3">
+                      <Brain className="text-[#2563eb]" size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#2563eb] transition-colors">
+                        {session.title}
+                      </h3>
+                      <p className="text-xs text-gray-500 mt-1">ID: {session.id.slice(0, 8)}...</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Time Details */}
+                <div className="space-y-4 mb-6">
+                  {/* Start Time */}
+                  <div className="flex items-start">
+                    <div className="p-2 bg-blue-50 rounded-lg mr-3">
+                      <svg className="w-4 h-4 text-[#2563eb]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="text-sm text-[#2563eb] font-medium">Start Time</div>
+                      <div className="text-gray-800 font-semibold">
+                        {formatDateTime(session.scheduled_start)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* End Time */}
+                  <div className="flex items-start">
+                    <div className="p-2 bg-indigo-50 rounded-lg mr-3">
+                      <svg className="w-4 h-4 text-[#3b82f6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="text-sm text-[#3b82f6] font-medium">End Time</div>
+                      <div className="text-gray-800 font-semibold">
+                        {formatDateTime(session.ended_at)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Duration */}
+                {session.scheduled_start && session.ended_at && (
+                  <div className="mb-6 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Duration:</span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {Math.round((new Date(session.ended_at).getTime() - new Date(session.scheduled_start).getTime()) / (1000 * 60 * 60))} hours
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="pt-4 border-t border-gray-100 flex space-x-2">
+                  <button className="flex-1 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-[#2563eb] to-[#3b82f6] hover:from-[#1d4ed8] hover:to-[#2563eb] rounded-lg transition-all">
+                    View Details
+                  </button>
+                  <button className="px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-[#2563eb] hover:bg-blue-50 rounded-lg transition-all">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer Legend */}
+      <div className="mt-12 pt-8 border-t border-gray-200">
+        <div className="flex flex-col md:flex-row justify-between items-center">
+          <div className="text-gray-600 mb-4 md:mb-0">
+            <span className="font-semibold text-gray-900">{filteredSessions.length}</span> sessions • 
+            <span className="font-semibold text-gray-900 ml-2">{sessions.length}</span> total
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-blue-100 rounded-full mr-2"></div>
+              <span className="text-sm text-gray-600">Draft</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-amber-100 rounded-full mr-2"></div>
+              <span className="text-sm text-gray-600">Upcoming</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-red-100 rounded-full mr-2"></div>
+              <span className="text-sm text-gray-600">Live Now</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-emerald-100 rounded-full mr-2"></div>
+              <span className="text-sm text-gray-600">Completed</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-gray-100 rounded-full mr-2"></div>
+              <span className="text-sm text-gray-600">Not Scheduled</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Empty Filter State */}
+      {filteredSessions.length === 0 && sessions.length > 0 && (
+        <div className="text-center py-12">
+          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No sessions match your filter</h3>
+          <p className="text-gray-600">Try selecting a different status filter</p>
+          <button 
+            onClick={() => setFilterStatus('all')}
+            className="mt-4 px-4 py-2 text-sm font-medium text-[#2563eb] hover:text-[#1d4ed8]"
+          >
+            Clear filter
+          </button>
+        </div>
+      )}
     </div>
   );
+
 };
 
 export default Dashboard;
