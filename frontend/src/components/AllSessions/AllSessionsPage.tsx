@@ -1,7 +1,8 @@
+// components/AllSessions/AllSessionsPage.tsx
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // Add this
 import { type Session } from '../../types';
 import SessionCard from './SessionCard';
-
 import LoadingSpinner from '../Shared/LoadingSpinner';
 
 interface AllSessionsPageProps {
@@ -10,6 +11,7 @@ interface AllSessionsPageProps {
 }
 
 const AllSessionsPage: React.FC<AllSessionsPageProps> = ({ sessions, setSessions }) => {
+  const navigate = useNavigate(); // Add this
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
@@ -68,6 +70,11 @@ const AllSessionsPage: React.FC<AllSessionsPageProps> = ({ sessions, setSessions
     return status.text.toLowerCase().replace(' ', '') === filterStatus;
   });
 
+  // Add this function to handle session click
+  const handleSessionClick = (sessionId: string) => {
+    navigate(`/session/${sessionId}/questions`);
+  };
+
   if (loading) return <LoadingSpinner message="Loading sessions..." />;
   if (!sessions.length) return <div className="text-center py-20 text-gray-500">No sessions found</div>;
 
@@ -82,17 +89,43 @@ const AllSessionsPage: React.FC<AllSessionsPageProps> = ({ sessions, setSessions
               {filteredSessions.length} session{filteredSessions.length !== 1 ? 's' : ''} • Total: {sessions.length}
             </p>
           </div>
-          
-       
         </div>
 
-      
+        {/* Filter buttons */}
+        <div className="flex gap-2 mb-6">
+          {['all', 'draft', 'upcoming', 'livenow', 'completed', 'notscheduled'].map((status) => (
+            <button
+              key={status}
+              onClick={() => setFilterStatus(status)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                filterStatus === status
+                  ? 'bg-[#2563eb] text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {status === 'all' ? 'All' : 
+               status === 'draft' ? 'Drafts' :
+               status === 'livenow' ? 'Live Now' :
+               status === 'notscheduled' ? 'Not Scheduled' :
+               status.charAt(0).toUpperCase() + status.slice(1)}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Sessions Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredSessions.map((session) => (
-          <SessionCard key={session.id} session={session} getSessionStatus={getSessionStatus} />
+          <div 
+            key={session.id} 
+            onClick={() => handleSessionClick(session.id)} 
+            className="cursor-pointer"
+          >
+            <SessionCard 
+              session={session} 
+              getSessionStatus={getSessionStatus} 
+            />
+          </div>
         ))}
       </div>
 
