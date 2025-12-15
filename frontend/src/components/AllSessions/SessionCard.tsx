@@ -87,12 +87,12 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, getSessionStatus }) 
         </div>
 
         {/* Duration */}
-        {session.scheduled_start && session.ended_at && (
+        {session.start_date && session.end_date && (
           <div className="mb-6 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-700">Duration:</span>
               <span className="text-sm font-bold text-gray-900">
-                {Math.round((new Date(session.ended_at).getTime() - new Date(session.scheduled_start).getTime()) / (1000 * 60 * 60))} hours
+                {Math.round((new Date(session.end_date).getTime() - new Date(session.start_date).getTime()) / (1000 * 60 * 60))} hours
               </span>
             </div>
           </div>

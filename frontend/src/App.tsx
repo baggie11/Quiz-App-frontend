@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import HostAuthPage from "./pages/AuthPage";
 import DashboardPage from "./pages/Dashboard";
+import QuestionBuilderPage from "./pages/QuestionPage";
 
 function App() {
   return (
@@ -11,6 +12,9 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path = "/auth" element = {<HostAuthPage/>}/>
         <Route path = "/dashboard" element = {<DashboardPage/>}/>
+        <Route path = "/question" element = {<QuestionBuilderPage
+        sessionId="session-123"
+        />}/>
 
         {/* Add more routes below when you create new pages */}
         {/* <Route path="/dashboard" element={<Dashboard />} /> */}

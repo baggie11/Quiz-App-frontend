@@ -7,8 +7,8 @@ export type UserType = {
 export type Session = {
   id: string;
   title: string;
-  scheduled_start: string | null;
-  ended_at: string | null;
+  start_date: string | null;
+  end_date: string | null;
   draft: boolean;
   created_at: string;
   updated_at: string;
@@ -25,3 +25,56 @@ export type SessionStatus = {
   color: string;
   icon: string;
 };
+
+
+export type QType = "quiz" | "multi" | "rating" | "open";
+
+export interface Question {
+  id: string;
+  text: string;
+  type: QType;
+  options?: string[];
+  ratingMax?: number;
+  correctAnswer?: number | string | null;
+  multiAnswers?: number[];
+  meta?: { required?: boolean; draft?: boolean; [k: string]: any };
+}
+
+export interface QuestionBuilderProps {
+  sessionId: string;
+  onSave?: (questions: Question[]) => void;
+  onPreview?: (questions: Question[]) => void;
+}
+
+export interface QuestionEditorProps {
+  question: Question;
+  index: number;
+  onUpdate: (id: string, patch: Partial<Question>) => void;
+  onAddOption: (questionId: string) => void;
+  onUpdateOption: (questionId: string, idx: number, value: string) => void;
+  onRemoveOption: (questionId: string, idx: number) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDropChangeType: (e: React.DragEvent, questionId: string) => void;
+}
+
+export interface QuestionPaletteProps {
+  isOpen: boolean;
+  onToggle: () => void;
+  onDragStart: (e: React.DragEvent, type: QType) => void;
+  onAddQuestion: (type: QType) => void;
+}
+
+export interface QuestionPreviewProps {
+  isOpen: boolean;
+  questions: Question[];
+  onClose: () => void;
+}
+
+export interface QuestionHeaderProps {
+  onPreview: () => void;
+  onSaveAll: () => void;
+  saving: boolean;
+}
+
+ 
+
