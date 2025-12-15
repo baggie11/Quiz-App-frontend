@@ -1,16 +1,14 @@
 // components/Questions/QuestionBuilderWrapper.tsx
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import Sidebar from '../components/Sidebar/Sidebar';
-import TopBar from '../components/TopBar/TopBar';
+import { useParams, useNavigate } from 'react-router-dom';
 import QuestionBuilderPage from './QuestionPage';
 import LoadingSpinner from '../components/Shared/LoadingSpinner';
 import { type UserType } from '../types';
-;
+import { ArrowLeft, FileText, Save, Eye, LayoutDashboard } from 'lucide-react';
 
 const QuestionBuilderWrapper: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
   const [user, setUser] = useState<UserType | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,40 +24,66 @@ const QuestionBuilderWrapper: React.FC = () => {
     setLoading(false);
   }, []);
 
-  if (loading) return <LoadingSpinner message="Checking authorization..." />;
-  
+  const handleGoBack = () => {
+    navigate('/dashboard?sessions');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
   if (!user || !token) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-xl font-semibold text-red-600">
-        ❌ Not authorized to access this page
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-sm border p-8 text-center">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FileText className="w-8 h-8 text-gray-600" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Sign in Required</h2>
+          <p className="text-gray-600 mb-6">
+            Please sign in to access the question builder.
+          </p>
+          <button
+            onClick={() => window.location.href = '/login'}
+            className="w-full px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-medium"
+          >
+            Sign In
+          </button>
+        </div>
       </div>
     );
   }
 
   if (!sessionId) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="flex">
-          <Sidebar
-            isOpen={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
-            activePage="sessions"
-            setActivePage={() => {}}
-          />
-          <div className="flex-1 min-h-screen lg:ml-64">
-            <TopBar onMenuClick={() => setSidebarOpen(true)} />
-            <main className="p-8">
-              <div className="max-w-4xl mx-auto p-6 bg-red-50 rounded-2xl border border-red-100">
-                <h2 className="text-xl font-semibold text-red-900 mb-2">Error: No Session ID</h2>
-                <p className="text-red-700 mb-4">Please select a session to add questions.</p>
-                <button
-                  onClick={() => window.location.href = '/dashboard?sessions'}
-                  className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
-                >
-                  Go to Sessions
-                </button>
-              </div>
-            </main>
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-3xl mx-auto">
+          <button
+            onClick={handleGoBack}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-8"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Back to Sessions
+          </button>
+          
+          <div className="bg-white rounded-xl border p-8">
+            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center mb-4">
+              <FileText className="w-6 h-6 text-gray-600" />
+            </div>
+            <h1 className="text-2xl font-semibold text-gray-900 mb-2">Session Not Found</h1>
+            <p className="text-gray-600 mb-6">
+              Please select a valid session from your dashboard.
+            </p>
+            <button
+              onClick={handleGoBack}
+              className="px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-medium"
+            >
+              View Sessions
+            </button>
           </div>
         </div>
       </div>
@@ -76,22 +100,76 @@ const QuestionBuilderWrapper: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="flex">
-        <Sidebar
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          activePage="sessions" // Set to sessions page in sidebar
-          setActivePage={() => {}}
-        />
-        <div className="flex-1 min-h-screen lg:ml-64">
-          <TopBar onMenuClick={() => setSidebarOpen(true)} />
-          <main className="p-4 lg:p-8 h-[calc(100vh-64px)] overflow-y-auto">
-            <QuestionBuilderPage
-              sessionId={sessionId}
-              onSave={handleSave}
-              onPreview={handlePreview}
-            />
-          </main>
+      {/* Header */}
+      <div className="bg-white border-b">
+        <div className="px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleGoBack}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="hidden sm:inline">Sessions</span>
+              </button>
+              <div className="h-6 w-px bg-gray-200" />
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900">Question Builder</h1>
+                <p className="text-sm text-gray-500">Session: {sessionId}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Question Types Sidebar */}
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Fixed Sidebar */}
+
+            {/* Scrollable Questions Area */}
+            <div className="flex-1">
+              <div className="bg-white rounded-lg border min-h-[600px]">
+                <div className="border-b p-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-semibold text-gray-900">Questions</h2>
+                    <div className="text-sm text-gray-500">
+                      {user?.email}
+                    </div>
+                  </div>
+                </div>
+                <div className="overflow-y-auto max-h-[calc(100vh-220px)]">
+                  <div className="p-4">
+                    <QuestionBuilderPage
+                      sessionId={sessionId}
+                      onSave={handleSave}
+                      onPreview={handlePreview}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="mt-8 pt-6 border-t">
+            <div className="flex flex-col sm:flex-row items-center justify-between text-sm text-gray-500">
+              <div>
+                © {new Date().getFullYear()} Your Platform
+              </div>
+              <button
+                onClick={() => window.open('/help/question-builder', '_blank')}
+                className="text-gray-600 hover:text-gray-900 mt-2 sm:mt-0"
+              >
+                Help & Documentation
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
