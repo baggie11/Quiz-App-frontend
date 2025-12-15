@@ -11,7 +11,7 @@ const Dashboard: React.FC = () => {
   const [user, setUser] = useState<UserType | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activePage, setActivePage] = useState("new-session");
+  const [activePage, setActivePage] = useState("sessions"); // Changed from "new-session" to "sessions"
   const [sessions, setSessions] = useState<Session[]>([]);
 
   useEffect(() => {
