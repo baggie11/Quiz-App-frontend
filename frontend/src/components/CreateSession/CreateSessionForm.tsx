@@ -1,12 +1,18 @@
 import React, { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Clock, Calendar as CalendarIcon, Tag } from 'lucide-react';
 import { type Session } from '../../types';
 
 interface CreateSessionFormProps {
-  addSession: (newSession: Session) => void;
+  addSession?: (newSession: Session) => void;
+  redirectToBuilder?: boolean; // New prop to control redirect behavior
 }
 
-const CreateSessionForm: React.FC<CreateSessionFormProps> = ({ addSession }) => {
+const CreateSessionForm: React.FC<CreateSessionFormProps> = ({ 
+  addSession, 
+  redirectToBuilder = true // Default to redirect
+}) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     sessionName: '',
     startDate: '',
@@ -87,7 +93,7 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({ addSession }) => 
     return true;
   };
 
-  const handleSubmit = async (e: FormEvent, saveAsDraft = false) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
@@ -115,7 +121,7 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({ addSession }) => 
         start_date: startDate.toISOString(),
         end_date: endDate.toISOString(),
         duration: parseInt(formData.duration), // Duration in minutes
-        draft: saveAsDraft,
+        draft: false,
       };
 
       console.log('Payload:', payload); // For debugging
@@ -132,16 +138,99 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({ addSession }) => 
       const data = await response.json();
 
       if (response.ok && data.status === "ok") {
-        setSuccess(saveAsDraft ? "Draft saved successfully" : "Session created successfully");
-        addSession({ ...data.data, draft: saveAsDraft });
-        setFormData({
-          sessionName: '',
-          startDate: '',
-          endDate: '',
-          duration: '',
-        });
+        const newSession = { ...data.data, draft: false };
+        
+        // Show success message
+        setSuccess("Session created successfully! Redirecting to question builder...");
+        
+        // Call addSession callback if provided
+        if (addSession) {
+          addSession(newSession);
+        }
+        
+        // Redirect to question builder with session ID in URL
+        if (redirectToBuilder && data.data?.id) {
+          // Small delay to show success message
+          setTimeout(() => {
+            navigate(`/session/${data.data.id}/questions`);
+          }, 1500);
+        } else {
+          // Reset form if not redirecting
+          setTimeout(() => {
+            setFormData({
+              sessionName: '',
+              startDate: '',
+              endDate: '',
+              duration: '',
+            });
+            setSuccess(null);
+          }, 2000);
+        }
       } else {
         setError(data.message || "Failed to create session");
+      }
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    setError(null);
+    setSuccess(null);
+
+    if (!formData.sessionName.trim()) {
+      setError("Session name is required for draft");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+
+      const payload = {
+        title: formData.sessionName.trim(),
+        start_date: formData.startDate ? new Date(formData.startDate).toISOString() : null,
+        end_date: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+        duration: formData.duration ? parseInt(formData.duration) : null,
+        draft: true,
+      };
+
+      const response = await fetch('http://localhost:3000/api/session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status === "ok") {
+        const newSession = { ...data.data, draft: true };
+        
+        // Show success message
+        setSuccess("Draft saved successfully!");
+        
+        // Call addSession callback if provided
+        if (addSession) {
+          addSession(newSession);
+        }
+        
+        // Reset form
+        setTimeout(() => {
+          setFormData({
+            sessionName: '',
+            startDate: '',
+            endDate: '',
+            duration: '',
+          });
+          setSuccess(null);
+        }, 2000);
+      } else {
+        setError(data.message || "Failed to save draft");
       }
     } catch (err: any) {
       setError(err.message || 'Something went wrong.');
@@ -200,13 +289,15 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({ addSession }) => 
           </div>
           <div className="hidden lg:flex items-center space-x-2 px-4 py-2 bg-blue-50 rounded-lg border border-blue-100">
             <Clock className="text-blue-600" size={18} />
-            <span className="text-sm font-medium text-blue-900">Draft</span>
+            <span className="text-sm font-medium text-blue-900">
+              {redirectToBuilder ? 'Auto-redirect Enabled' : 'Manual Mode'}
+            </span>
           </div>
         </div>
-        <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full animate-pulse" />
+        <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full" />
       </div>
 
-      <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-8">
         {/* Session Details */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
           <div className="flex items-center space-x-3 mb-6">
@@ -301,22 +392,6 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({ addSession }) => 
               </div>
             </div>
           </div>
-
-          {/* Date Information */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
-            <div className="flex items-start space-x-3">
-              <CalendarIcon className="text-blue-600 mt-0.5" size={18} />
-              <div>
-                <p className="text-sm font-medium text-blue-900 mb-1">Availability Window</p>
-                <ul className="text-xs text-blue-700 space-y-1">
-                  <li>• Participants can start the test anytime between these dates</li>
-                  <li>• Once started, they must complete within the test duration</li>
-                  <li>• Start date must be today or in the future</li>
-                  <li>• End date must be after start date</li>
-                </ul>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Test Duration */}
@@ -340,8 +415,8 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({ addSession }) => 
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {durationOptions.map((option) => (
                   <button
-                    key={option.value}
                     type="button"
+                    key={option.value}
                     onClick={() => {
                       if (option.value === 'custom') {
                         // Focus on custom input
@@ -388,49 +463,6 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({ addSession }) => 
                   minutes
                 </div>
               </div>
-              <p className="mt-2 text-sm text-gray-500">
-                Enter the total time allowed for the test (1-1440 minutes)
-              </p>
-            </div>
-
-            {/* Duration Display */}
-            {formData.duration && (
-              <div className="p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-100">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-indigo-900 mb-1">Selected Duration</p>
-                    <p className="text-2xl font-bold text-indigo-700">
-                      {formatDuration(formData.duration)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-indigo-600 mb-1">Total minutes</p>
-                    <p className="text-2xl font-bold text-indigo-700">
-                      {formData.duration}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Duration Information */}
-            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-              <div className="flex items-start space-x-3">
-                <svg className="w-5 h-5 text-gray-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div>
-                  <p className="text-sm font-medium text-gray-900 mb-1">About Test Duration</p>
-                  <ul className="text-xs text-gray-700 space-y-1">
-                    <li>• Duration is the time limit for completing the test</li>
-                    <li>• Timer starts when participant begins the test</li>
-                    <li>• Test auto-submits when time expires</li>
-                    <li>• Minimum: 1 minute</li>
-                    <li>• Maximum: 24 hours (1440 minutes)</li>
-                    <li>• Recommended: 30-180 minutes for standard tests</li>
-                  </ul>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -438,7 +470,7 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({ addSession }) => 
         {/* Session Summary */}
         {formData.sessionName && formData.startDate && formData.endDate && formData.duration && (
           <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-2xl border border-emerald-200 p-6">
-            <h3 className="text-lg font-semibold text-emerald-900 mb-4">Session Summary</h3>
+            <h3 className="text-lg font-semibold text-emerald-900 mb-4">Ready to Create Session</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <p className="text-sm text-emerald-800">
@@ -458,11 +490,18 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({ addSession }) => 
                 <p className="text-sm text-emerald-800">
                   <span className="font-medium">Total Minutes:</span> {formData.duration}
                 </p>
-                <p className="text-sm text-emerald-800">
-                  <span className="font-medium">Availability Period:</span> {Math.ceil((new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / (1000 * 60 * 60 * 24))} days
-                </p>
               </div>
             </div>
+            {redirectToBuilder && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <p className="text-sm text-blue-800 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clipRule="evenodd" />
+                  </svg>
+                  After creating the session, you'll be redirected to the question builder
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -486,15 +525,44 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({ addSession }) => 
           </div>
         )}
 
-        {/* Submit Button */}
-        <div className="">
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Save Draft Button */}
+          <button
+            type="button"
+            onClick={handleSaveDraft}
+            disabled={!formData.sessionName.trim() || loading}
+            className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Saving...' : 'Save as Draft'}
+          </button>
+          
+          {/* Create Session Button */}
           <button
             type="submit"
-            className="px-6 py-3 w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-xl hover:opacity-90 transition-all disabled:opacity-50"
             disabled={loading}
+            className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-xl hover:opacity-90 transition-all disabled:opacity-50"
           >
-            {loading ? 'Creating...' : 'Create Session'}
+            {loading ? 'Creating...' : 'Create Session & Add Questions'}
           </button>
+        </div>
+
+        {/* Information Note */}
+        <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+          <div className="flex items-start space-x-3">
+            <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="text-sm font-medium text-blue-900 mb-1">What happens next?</p>
+              <ul className="text-xs text-blue-700 space-y-1">
+                <li>• After creating the session, you'll be redirected to the question builder</li>
+                <li>• You can add questions immediately or come back later</li>
+                <li>• Save as Draft to create without required fields filled</li>
+                <li>• All sessions appear in your dashboard for easy management</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </form>
     </div>
