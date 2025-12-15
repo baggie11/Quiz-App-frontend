@@ -50,18 +50,18 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
 
   // Question CRUD operations
   const addQuestion = (type: QType) => {
-    const q: Question = {
-      id: uid(),
-      text: "",
-      type,
-      options: type === "quiz" || type === "multi" ? [defaultOption(1), defaultOption(2)] : undefined,
-      ratingMax: type === "rating" ? 5 : undefined,
-      correctAnswer: null,
-      multiAnswers: type === "multi" ? [] : undefined,
-      meta: {},
-    };
-    setQuestions((p) => [...p, q]);
+  const q: Question = {
+    id: uid(),
+    text: "",
+    type,
+    options: type === "quiz" || type === "multi" ? [defaultOption(1), defaultOption(2)] : undefined,
+    ratingMax: type === "rating" ? 5 : undefined,
+    correctAnswer: type === "quiz" ? null : undefined, // Ensure correctAnswer is null for quiz
+    multiAnswers: type === "multi" ? [] : undefined,   // Ensure multiAnswers is [] for multi
+    meta: {},
   };
+  setQuestions((p) => [...p, q]);
+};
 
   const removeQuestion = (id: string) => {
     setQuestions((p) => p.filter((x) => x.id !== id));
@@ -122,45 +122,44 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
   };
 
   const onDropChangeType = (e: React.DragEvent, questionId: string) => {
-    e.preventDefault();
-    const t = (e.dataTransfer.getData("application/qtype") || "") as QType;
-    if (!t) return;
+  e.preventDefault();
+  const t = (e.dataTransfer.getData("application/qtype") || "") as QType;
+  if (!t) return;
 
-    if (t === "quiz") {
-      updateQuestion(questionId, {
-        type: "quiz",
-        options: [defaultOption(1), defaultOption(2)],
-        ratingMax: undefined,
-        correctAnswer: null,
-        multiAnswers: [],
-      });
-    } else if (t === "multi") {
-      updateQuestion(questionId, {
-        type: "multi",
-        options: [defaultOption(1), defaultOption(2)],
-        ratingMax: undefined,
-        correctAnswer: null,
-        multiAnswers: [],
-      });
-    } else if (t === "rating") {
-      updateQuestion(questionId, { 
-        type: "rating", 
-        options: undefined, 
-        ratingMax: 5, 
-        correctAnswer: null, 
-        multiAnswers: undefined 
-      });
-    } else if (t === "open") {
-      updateQuestion(questionId, { 
-        type: "open", 
-        options: undefined, 
-        ratingMax: undefined, 
-        correctAnswer: null, 
-        multiAnswers: undefined 
-      });
-    }
-  };
-
+  if (t === "quiz") {
+    updateQuestion(questionId, {
+      type: "quiz",
+      options: [defaultOption(1), defaultOption(2)],
+      ratingMax: undefined,
+      correctAnswer: null,  // Reset correct answer
+      multiAnswers: undefined,
+    });
+  } else if (t === "multi") {
+    updateQuestion(questionId, {
+      type: "multi",
+      options: [defaultOption(1), defaultOption(2)],
+      ratingMax: undefined,
+      correctAnswer: undefined,
+      multiAnswers: [],  // Reset multi answers to empty array
+    });
+  } else if (t === "rating") {
+    updateQuestion(questionId, { 
+      type: "rating", 
+      options: undefined, 
+      ratingMax: 5, 
+      correctAnswer: undefined, 
+      multiAnswers: undefined 
+    });
+  } else if (t === "open") {
+    updateQuestion(questionId, { 
+      type: "open", 
+      options: undefined, 
+      ratingMax: undefined, 
+      correctAnswer: null, // Allow model answer for open questions
+      multiAnswers: undefined 
+    });
+  }
+};
   const onDragOver = (e: React.DragEvent) => {
     e.preventDefault();
   };
