@@ -66,7 +66,7 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, getSessionStatus }) 
             <div>
               <div className="text-sm text-[#2563eb] font-medium">Start Time</div>
               <div className="text-gray-800 font-semibold">
-                {formatDateTime(session.scheduled_start)}
+                {formatDateTime(session.start_date)}
               </div>
             </div>
           </div>
@@ -80,7 +80,7 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, getSessionStatus }) 
             <div>
               <div className="text-sm text-[#3b82f6] font-medium">End Time</div>
               <div className="text-gray-800 font-semibold">
-                {formatDateTime(session.ended_at)}
+                {formatDateTime(session.end_date)}
               </div>
             </div>
           </div>

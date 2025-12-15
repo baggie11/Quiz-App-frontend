@@ -41,8 +41,8 @@ const AllSessionsPage: React.FC<AllSessionsPageProps> = ({ sessions, setSessions
 
   const getSessionStatus = (session: Session) => {
     const now = new Date();
-    const start = session.scheduled_start ? new Date(session.scheduled_start) : null;
-    const end = session.ended_at ? new Date(session.ended_at) : null;
+    const start = session.start_date ? new Date(session.start_date) : null;
+    const end = session.end_date ? new Date(session.end_date) : null;
     
     if (session.draft) {
       return { text: 'Draft', color: 'bg-blue-100 text-blue-800', icon: '📝' };
