@@ -1,29 +1,63 @@
-import React, { useState, useEffect, useRef } from 'react';
-import type { QuestionBuilderProps, Question, QType } from '../types';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import type { QuestionBuilderProps, Question, QType, SaveState } from '../types';
 import { QuestionHeader } from '../components/Questions/QuestionHeader';
 import { QuestionPalette } from '../components/Questions/QuestionPalette';
 import { QuestionEditor } from '../components/Questions/QuestionEditor';
 import { QuestionPreview } from '../components/Questions/QuestionPreview';
+import { useDebounce } from '../hooks/useDebounce';
 
 // Helper functions
 const uid = (p = "q") => `${p}_${Date.now().toString(36)}_${Math.floor(Math.random() * 1000)}`;
 const defaultOption = (n = 1) => `Option ${n}`;
 
+// Local storage key
+const STORAGE_KEY = (sessionId: string) => `quiz_builder_${sessionId}`;
+
 export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
   sessionId,
   onSave,
-  onPreview
+  onPreview,
+  initialQuestions = [],
+  autoSaveInterval = 3000, // Default 3 seconds
 }) => {
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState<Question[]>(initialQuestions);
   const [paletteOpen, setPaletteOpen] = useState(true);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [filter, setFilter] = useState<"all" | QType | "drafts">("all");
-  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>({
+    isSaving: false,
+    lastSaved: null,
+    hasUnsavedChanges: false,
+    autoSaveEnabled: true,
+    saveError: null,
+  });
+  
   const previewModalRef = useRef<HTMLDivElement>(null);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialMount = useRef(true);
+  
+  // Debounced questions for auto-save
+  const debouncedQuestions = useDebounce(questions, autoSaveInterval);
 
-  // Initialize with starter question
+  // Load saved state from localStorage on mount
   useEffect(() => {
-    if (questions.length === 0) {
+    const savedData = localStorage.getItem(STORAGE_KEY(sessionId));
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        if (parsed.questions && parsed.questions.length > 0) {
+          setQuestions(parsed.questions);
+          setSaveState(prev => ({
+            ...prev,
+            lastSaved: parsed.lastSaved || null,
+          }));
+          console.log('Loaded questions from localStorage');
+        }
+      } catch (error) {
+        console.error('Failed to load saved data:', error);
+      }
+    } else if (questions.length === 0) {
+      // Initialize with starter question only if no saved data and no initial questions
       const starter: Question = {
         id: uid(),
         text: "",
@@ -36,84 +70,268 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
       };
       setQuestions([starter]);
     }
-  }, []);
+  }, [sessionId]);
 
-  // Focus preview modal when it opens
+  // Save to localStorage whenever questions change (debounced)
   useEffect(() => {
-    if (previewOpen && previewModalRef.current) {
-      // Small delay to ensure modal is rendered
-      setTimeout(() => {
-        previewModalRef.current?.focus();
-      }, 50);
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
     }
-  }, [previewOpen]);
 
-  // Question CRUD operations
-  const addQuestion = (type: QType) => {
-  const q: Question = {
-    id: uid(),
-    text: "",
-    type,
-    options: type === "quiz" || type === "multi" ? [defaultOption(1), defaultOption(2)] : undefined,
-    ratingMax: type === "rating" ? 5 : undefined,
-    correctAnswer: type === "quiz" ? null : undefined, // Ensure correctAnswer is null for quiz
-    multiAnswers: type === "multi" ? [] : undefined,   // Ensure multiAnswers is [] for multi
-    meta: {},
-  };
-  setQuestions((p) => [...p, q]);
-};
+    if (questions.length > 0) {
+      const saveData = {
+        questions,
+        lastSaved: new Date().toISOString(),
+        version: 1,
+      };
+      
+      try {
+        localStorage.setItem(STORAGE_KEY(sessionId), JSON.stringify(saveData));
+        console.log('Auto-saved to localStorage');
+      } catch (error) {
+        console.error('Failed to auto-save:', error);
+      }
+    }
+  }, [debouncedQuestions, sessionId]);
 
-  const removeQuestion = (id: string) => {
-    setQuestions((p) => p.filter((x) => x.id !== id));
-  };
+  // Auto-save to server when there are unsaved changes
+  useEffect(() => {
+    if (!saveState.autoSaveEnabled || !saveState.hasUnsavedChanges || isInitialMount.current) {
+      return;
+    }
 
-  const updateQuestion = (id: string, patch: Partial<Question>) => {
-    setQuestions((p) => p.map((q) => (q.id === id ? { ...q, ...patch } : q)));
-  };
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
 
-  const addOption = (questionId: string) => {
-    setQuestions((p) =>
-      p.map((q) => {
+    autoSaveTimerRef.current = setTimeout(() => {
+      handleAutoSave();
+    }, autoSaveInterval);
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [questions, saveState.hasUnsavedChanges, saveState.autoSaveEnabled, autoSaveInterval]);
+
+  // Mark changes as unsaved when questions are modified
+  const markUnsavedChanges = useCallback(() => {
+    if (!saveState.hasUnsavedChanges) {
+      setSaveState(prev => ({ ...prev, hasUnsavedChanges: true }));
+    }
+  }, [saveState.hasUnsavedChanges]);
+
+  // Auto-save function
+  const handleAutoSave = useCallback(async () => {
+    if (!saveState.hasUnsavedChanges || saveState.isSaving) {
+      return;
+    }
+
+    setSaveState(prev => ({ ...prev, isSaving: true, saveError: null }));
+    
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`http://localhost:3000/api/session/${sessionId}/questions/auto-save`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json", 
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({ 
+          questions,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Auto-save failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      setSaveState(prev => ({
+        ...prev,
+        isSaving: false,
+        hasUnsavedChanges: false,
+        lastSaved: result.savedAt || new Date().toISOString(),
+      }));
+      
+      console.log('Auto-save successful');
+    } catch (error) {
+      console.error('Auto-save error:', error);
+      setSaveState(prev => ({
+        ...prev,
+        isSaving: false,
+        saveError: error instanceof Error ? error.message : 'Auto-save failed',
+      }));
+    }
+  }, [questions, sessionId, saveState.hasUnsavedChanges, saveState.isSaving]);
+
+  // Manual save function
+  const handleSaveAll = useCallback(async () => {
+    if (saveState.isSaving) {
+      return;
+    }
+
+    setSaveState(prev => ({ ...prev, isSaving: true, saveError: null }));
+    
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`http://localhost:3000/api/session/${sessionId}/questions/save`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json", 
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({ 
+          questions,
+          forceSave: true,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Save failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      // Call external onSave callback if provided
+      if (onSave) {
+        onSave(questions);
+      }
+      
+      setSaveState(prev => ({
+        ...prev,
+        isSaving: false,
+        hasUnsavedChanges: false,
+        lastSaved: result.savedAt || new Date().toISOString(),
+      }));
+      
+      // Show success message
+      alert('All changes saved successfully!');
+      console.log('Manual save successful');
+      
+    } catch (error) {
+      console.error('Save error:', error);
+      setSaveState(prev => ({
+        ...prev,
+        isSaving: false,
+        saveError: error instanceof Error ? error.message : 'Save failed',
+      }));
+      
+      // Show error message
+      alert('Failed to save changes. Please try again.');
+    }
+  }, [questions, sessionId, saveState.isSaving, onSave]);
+
+  // Export questions function
+  const handleExportQuestions = useCallback(() => {
+    const dataStr = JSON.stringify(questions, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `quiz-questions-${sessionId}-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [questions, sessionId]);
+
+  // Import questions function
+  const handleImportQuestions = useCallback((importedQuestions: Question[]) => {
+    if (window.confirm('Import questions? This will add to your current questions.')) {
+      const mergedQuestions = [...questions, ...importedQuestions.map(q => ({
+        ...q,
+        id: q.id || uid(), // Ensure all questions have IDs
+      }))];
+      
+      setQuestions(mergedQuestions);
+      setSaveState(prev => ({ ...prev, hasUnsavedChanges: true }));
+      alert(`${importedQuestions.length} questions imported successfully.`);
+    }
+  }, [questions]);
+
+  // Question CRUD operations (updated to mark unsaved changes)
+  const addQuestion = useCallback((type: QType) => {
+    const q: Question = {
+      id: uid(),
+      text: "",
+      type,
+      options: type === "quiz" || type === "multi" ? [defaultOption(1), defaultOption(2)] : undefined,
+      ratingMax: type === "rating" ? 5 : undefined,
+      correctAnswer: type === "quiz" ? null : undefined,
+      multiAnswers: type === "multi" ? [] : undefined,
+      meta: {},
+    };
+    setQuestions(prev => [...prev, q]);
+    markUnsavedChanges();
+  }, [markUnsavedChanges]);
+
+  const removeQuestion = useCallback((id: string) => {
+    if (questions.length <= 1) {
+      alert('You must have at least one question.');
+      return;
+    }
+    
+    if (window.confirm('Are you sure you want to delete this question?')) {
+      setQuestions(prev => prev.filter(q => q.id !== id));
+      markUnsavedChanges();
+    }
+  }, [questions.length, markUnsavedChanges]);
+
+  const updateQuestion = useCallback((id: string, patch: Partial<Question>) => {
+    setQuestions(prev => prev.map(q => (q.id === id ? { ...q, ...patch } : q)));
+    markUnsavedChanges();
+  }, [markUnsavedChanges]);
+
+  const addOption = useCallback((questionId: string) => {
+    setQuestions(prev =>
+      prev.map(q => {
         if (q.id !== questionId) return q;
         const opts = [...(q.options || [])];
         opts.push(defaultOption(opts.length + 1));
         return { ...q, options: opts };
       })
     );
-  };
+    markUnsavedChanges();
+  }, [markUnsavedChanges]);
 
-  const updateOption = (questionId: string, idx: number, value: string) => {
-    setQuestions((p) =>
-      p.map((q) => {
+  const updateOption = useCallback((questionId: string, idx: number, value: string) => {
+    setQuestions(prev =>
+      prev.map(q => {
         if (q.id !== questionId) return q;
         const opts = [...(q.options || [])];
         opts[idx] = value;
         return { ...q, options: opts };
       })
     );
-  };
+    markUnsavedChanges();
+  }, [markUnsavedChanges]);
 
-  const removeOption = (questionId: string, idx: number) => {
-    setQuestions((p) =>
-      p.map((q) => {
+  const removeOption = useCallback((questionId: string, idx: number) => {
+    setQuestions(prev =>
+      prev.map(q => {
         if (q.id !== questionId) return q;
         const opts = [...(q.options || [])];
         opts.splice(idx, 1);
         
-        // Update correctAnswer for quiz questions
         let ca = typeof q.correctAnswer === "number" ? q.correctAnswer : null;
         if (ca !== null) {
           if (ca === idx) ca = null;
           else if (ca > idx) ca -= 1;
         }
         
-        // Update multiAnswers for multi questions
         const ma = (q.multiAnswers || []).filter((i) => i !== idx).map((i) => (i > idx ? i - 1 : i));
         
         return { ...q, options: opts, correctAnswer: ca, multiAnswers: ma };
       })
     );
-  };
+    markUnsavedChanges();
+  }, [markUnsavedChanges]);
 
   // Drag and drop handlers
   const onPaletteDragStart = (e: React.DragEvent, t: QType) => {
@@ -121,96 +339,122 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
     e.dataTransfer.effectAllowed = "copy";
   };
 
-  const onDropChangeType = (e: React.DragEvent, questionId: string) => {
-  e.preventDefault();
-  const t = (e.dataTransfer.getData("application/qtype") || "") as QType;
-  if (!t) return;
+  const onDropChangeType = useCallback((e: React.DragEvent, questionId: string) => {
+    e.preventDefault();
+    const t = (e.dataTransfer.getData("application/qtype") || "") as QType;
+    if (!t) return;
 
-  if (t === "quiz") {
-    updateQuestion(questionId, {
-      type: "quiz",
-      options: [defaultOption(1), defaultOption(2)],
-      ratingMax: undefined,
-      correctAnswer: null,  // Reset correct answer
-      multiAnswers: undefined,
-    });
-  } else if (t === "multi") {
-    updateQuestion(questionId, {
-      type: "multi",
-      options: [defaultOption(1), defaultOption(2)],
-      ratingMax: undefined,
-      correctAnswer: undefined,
-      multiAnswers: [],  // Reset multi answers to empty array
-    });
-  } else if (t === "rating") {
-    updateQuestion(questionId, { 
-      type: "rating", 
-      options: undefined, 
-      ratingMax: 5, 
-      correctAnswer: undefined, 
-      multiAnswers: undefined 
-    });
-  } else if (t === "open") {
-    updateQuestion(questionId, { 
-      type: "open", 
-      options: undefined, 
-      ratingMax: undefined, 
-      correctAnswer: null, // Allow model answer for open questions
-      multiAnswers: undefined 
-    });
-  }
-};
+    let updateData: Partial<Question> = {};
+    
+    if (t === "quiz") {
+      updateData = {
+        type: "quiz",
+        options: [defaultOption(1), defaultOption(2)],
+        ratingMax: undefined,
+        correctAnswer: null,
+        multiAnswers: undefined,
+      };
+    } else if (t === "multi") {
+      updateData = {
+        type: "multi",
+        options: [defaultOption(1), defaultOption(2)],
+        ratingMax: undefined,
+        correctAnswer: undefined,
+        multiAnswers: [],
+      };
+    } else if (t === "rating") {
+      updateData = { 
+        type: "rating", 
+        options: undefined, 
+        ratingMax: 5, 
+        correctAnswer: undefined, 
+        multiAnswers: undefined 
+      };
+    } else if (t === "open") {
+      updateData = { 
+        type: "open", 
+        options: undefined, 
+        ratingMax: undefined, 
+        correctAnswer: null,
+        multiAnswers: undefined 
+      };
+    }
+
+    updateQuestion(questionId, updateData);
+  }, [updateQuestion]);
+
   const onDragOver = (e: React.DragEvent) => {
     e.preventDefault();
   };
 
-  // Save and preview handlers
-  const handleSaveAll = async () => {
-    if (onSave) onSave(questions);
-    
-    setSaving(true);
-    try {
-      const token = localStorage.getItem("token");
-      await fetch(`http://localhost:3000/api/session/${sessionId}/questions`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json", 
-          Authorization: `Bearer ${token}` 
-        },
-        body: JSON.stringify({ questions }),
-      });
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSaving(false);
+  // Preview handler
+  const handlePreview = useCallback(() => {
+    if (onPreview) {
+      onPreview(questions);
     }
-  };
-
-  const handlePreview = () => {
-    if (onPreview) onPreview(questions);
     setPreviewOpen(true);
-  };
+  }, [questions, onPreview]);
 
-  const filteredQuestions = questions.filter((q) => 
-    filter === "all" ? true : 
-    filter === "drafts" ? !!q.meta?.draft : 
-    q.type === filter
+  // Toggle auto-save
+  const toggleAutoSave = useCallback(() => {
+    setSaveState(prev => ({
+      ...prev,
+      autoSaveEnabled: !prev.autoSaveEnabled,
+    }));
+    
+    if (!saveState.autoSaveEnabled && saveState.hasUnsavedChanges) {
+      handleAutoSave();
+    }
+  }, [saveState.autoSaveEnabled, saveState.hasUnsavedChanges, handleAutoSave]);
+
+  // Filtered questions
+  const filteredQuestions = useMemo(() => 
+    questions.filter((q) => 
+      filter === "all" ? true : 
+      filter === "drafts" ? !!q.meta?.draft : 
+      q.type === filter
+    ), [questions, filter]
+  );
+
+  // Calculate unsaved questions count
+  const unsavedQuestionsCount = useMemo(() => 
+    questions.filter(q => q.meta?.draft).length, 
+    [questions]
   );
 
   return (
     <div className="relative">
+      {/* Save Indicator */}
+      
       {/* Fixed Header Container */}
       <div className="sticky top-0 z-40 bg-white border-b shadow-sm">
-        <div className="max-w-6xl mx-auto px-4">
+        <div className="w-[800px] mx-auto px-0">
           <QuestionHeader 
             onPreview={handlePreview}
             onSaveAll={handleSaveAll}
-            saving={saving}
+            saving={saveState.isSaving}
             questionsCount={questions.length}
             sessionId={sessionId}
+            unsavedCount={unsavedQuestionsCount}
+            lastSaved={saveState.lastSaved}
+            onExport={handleExportQuestions}
+            onImport={() => {
+              // This would trigger a file input in a real implementation
+              const sampleQuestions: Question[] = [
+                {
+                  id: uid(),
+                  text: "Sample imported question",
+                  type: "quiz",
+                  options: ["Option A", "Option B", "Option C"],
+                  correctAnswer: 1,
+                  meta: {},
+                },
+              ];
+              handleImportQuestions(sampleQuestions);
+            }}
           />
           
-          {/* Filter Tabs - Inside the sticky container */}
+          {/* Filter Tabs */}
           <div className="px-4 pb-3">
             <div className="flex gap-2 flex-wrap">
               {["all", "quiz", "multi", "rating", "open", "drafts"].map((f) => (
@@ -224,6 +468,11 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
                   }`}
                 >
                   {f.charAt(0).toUpperCase() + f.slice(1)}
+                  {f === "drafts" && unsavedQuestionsCount > 0 && (
+                    <span className="ml-1.5 px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-xs">
+                      {unsavedQuestionsCount}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -231,7 +480,7 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
         </div>
       </div>
 
-      {/* Main Content - Pushed down for sticky header */}
+      {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-6">
           {/* Left Sidebar - Palette */}
@@ -280,15 +529,6 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
                       onDragOver={onDragOver}
                       onDropChangeType={onDropChangeType}
                     />
-                    <button
-                      onClick={() => removeQuestion(q.id)}
-                      className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 p-1.5 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-all duration-200 shadow-sm"
-                      title="Delete question"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
                   </div>
                 ))}
               </div>
@@ -322,13 +562,40 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
         </div>
       </div>
 
-      {/* Preview Modal - with ref for focus management */}
+      {/* Preview Modal */}
       <QuestionPreview
         isOpen={previewOpen}
         questions={questions}
         onClose={() => setPreviewOpen(false)}
         ref={previewModalRef}
       />
+
+      {/* Save All Floating Button */}
+      {saveState.hasUnsavedChanges && (
+        <button
+          onClick={handleSaveAll}
+          disabled={saveState.isSaving}
+          className={`fixed bottom-8 right-8 px-6 py-3 rounded-full shadow-lg font-medium flex items-center gap-2 transition-all z-50 ${
+            saveState.isSaving
+              ? 'bg-gray-600 cursor-not-allowed'
+              : 'bg-green-600 hover:bg-green-700'
+          } text-white`}
+        >
+          {saveState.isSaving ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              Saving...
+            </>
+          ) : (
+            <>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Save All Changes
+            </>
+          )}
+        </button>
+      )}
     </div>
   );
 };

@@ -77,4 +77,30 @@ export interface QuestionHeaderProps {
 }
 
  
+// types.ts (add these interfaces)
+export interface SaveState {
+  isSaving: boolean;
+  lastSaved: string | null;
+  hasUnsavedChanges: boolean;
+  autoSaveEnabled: boolean;
+  saveError: string | null;
+}
+
+export interface QuizState {
+  title: string;
+  description: string;
+  questions: Question[];
+  sessionId: string;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface QuestionBuilderProps {
+  sessionId: string;
+  onSave?: (questions: Question[]) => void;
+  onPreview?: (questions: Question[]) => void;
+  initialQuestions?: Question[]; // Add this for loading existing questions
+  autoSaveInterval?: number; // Add this for configurable auto-save
+}
 
