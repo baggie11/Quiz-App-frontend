@@ -221,7 +221,7 @@ const QuizVisionHome: React.FC = () => {
           // Auto redirect after audio finishes
           console.log('Redirecting to join-quiz page...');
           timeoutRef.current = setTimeout(() => {
-            navigate('/join-quiz');
+            navigate('/join-session');
           }, 300); // Slightly longer delay for better UX
         };
         

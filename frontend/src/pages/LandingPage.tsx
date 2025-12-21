@@ -58,8 +58,72 @@ declare global {
   }
 }
 
-// Speak utility function
-const speak = (text: string, callback?: () => void): void => {
+// Speak utility function using Coqui TTS
+const speakWithCoqui = async (text: string, callback?: () => void): Promise<void> => {
+  try {
+    console.log('Coqui TTS: Requesting speech for:', text);
+    
+    const formData = new FormData();
+    formData.append('text', text);
+    
+    const response = await fetch('http://127.0.0.1:5000/tts', {
+      method: 'POST',
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
+    
+    const audioBlob = await response.blob();
+    
+    if (audioBlob.size === 0) {
+      throw new Error('Received empty audio file');
+    }
+    
+    // Create object URL from blob
+    const audioUrl = URL.createObjectURL(audioBlob);
+    
+    // Create audio element
+    const audio = new Audio(audioUrl);
+    
+    // Set up event handlers
+    audio.onplay = () => {
+      console.log('Coqui TTS: Audio playback started');
+    };
+    
+    audio.onended = () => {
+      console.log('Coqui TTS: Audio playback finished');
+      // Clean up object URL
+      URL.revokeObjectURL(audioUrl);
+      // Call callback if provided
+      if (callback) {
+        callback();
+      }
+    };
+    
+    audio.onerror = (event) => {
+      console.error('Coqui TTS: Audio playback error:', event);
+      URL.revokeObjectURL(audioUrl);
+      // Fallback to browser TTS if Coqui fails
+      console.log('Coqui TTS failed, falling back to browser TTS');
+      fallbackSpeak(text, callback);
+    };
+    
+    // Play the audio
+    console.log('Coqui TTS: Playing audio...');
+    await audio.play();
+    
+  } catch (error) {
+    console.error('Coqui TTS Error:', error);
+    // Fallback to browser TTS
+    console.log('Coqui TTS failed, falling back to browser TTS');
+    fallbackSpeak(text, callback);
+  }
+};
+
+// Fallback to browser speech synthesis
+const fallbackSpeak = (text: string, callback?: () => void): void => {
   if ('speechSynthesis' in window) {
     speechSynthesis.cancel();
     
@@ -78,6 +142,11 @@ const speak = (text: string, callback?: () => void): void => {
   } else if (callback) {
     callback();
   }
+};
+
+// Speak function that tries Coqui first, then falls back
+const speak = (text: string, callback?: () => void): void => {
+  speakWithCoqui(text, callback);
 };
 
 // Navbar Component
@@ -175,7 +244,7 @@ const QuizVision: React.FC = () => {
   const [speechError, setSpeechError] = useState<string>('');
   const [recognizedText, setRecognizedText] = useState<string>('');
   const [audioLevel, setAudioLevel] = useState<number>(0);
-  const [currentStep, setCurrentStep] = useState<'welcome' | 'listenCode' | 'confirm' | 'joining'>('listenCode');
+  const [currentStep, setCurrentStep] = useState<'welcome' | 'listenCode' | 'confirm' | 'joining'>('welcome');
   const [confirmationText, setConfirmationText] = useState<string>('');
   const [isConfirming, setIsConfirming] = useState<boolean>(false);
   const [browserSupported, setBrowserSupported] = useState<boolean>(true);
@@ -183,6 +252,7 @@ const QuizVision: React.FC = () => {
   const [hasStartedVoiceFlow, setHasStartedVoiceFlow] = useState<boolean>(false);
   const [isTTSActive, setIsTTSActive] = useState<boolean>(false);
   const [hasPlayedIntro, setHasPlayedIntro] = useState<boolean>(false);
+  const [isLoadingAudio, setIsLoadingAudio] = useState<boolean>(false);
 
   // Refs
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -198,7 +268,7 @@ const QuizVision: React.FC = () => {
     joinCodeRef.current = code;
   };
 
-  // Auto-start microphone when component mounts
+  // Auto-start TTS when component mounts
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
@@ -214,10 +284,10 @@ const QuizVision: React.FC = () => {
       setSpeechError('Speech recognition requires HTTPS. This feature may not work on HTTP.');
     }
 
-    // Auto-start the voice flow without TTS
+    // Auto-start TTS welcome message after a short delay
     const startTimer = setTimeout(() => {
-      handleStartVoiceFlow();
-    }, 500);
+      playWelcomeMessage();
+    }, 1000); // 1 second delay
 
     // Add click listener to main content
     const mainContent = mainContentRef.current;
@@ -246,6 +316,28 @@ const QuizVision: React.FC = () => {
       cleanup();
     };
   }, []);
+
+  const playWelcomeMessage = (): void => {
+    if (hasPlayedIntro) return;
+    
+    setIsLoadingAudio(true);
+    setIsTTSActive(true);
+    setCurrentStep('welcome');
+    
+    console.log('Playing welcome message with Coqui TTS...');
+    
+    speak("Welcome to Quiz Vision. Speak out your session code.", () => {
+      console.log('Welcome message finished');
+      setIsTTSActive(false);
+      setIsLoadingAudio(false);
+      setHasPlayedIntro(true);
+      
+      // After welcome message, auto-start listening
+      setTimeout(() => {
+        handleStartVoiceFlow();
+      }, 500);
+    });
+  };
 
   const cleanup = (): void => {
     if (recognitionRef.current) {
@@ -300,22 +392,25 @@ const QuizVision: React.FC = () => {
   };
 
   const handleTapToStartTTS = (): void => {
-    if (isSpeakingRef.current || speechSynthesis.speaking) {
+    if (isSpeakingRef.current || isLoadingAudio) {
       // If TTS is already speaking, stop it
       speechSynthesis.cancel();
       setIsTTSActive(false);
       isSpeakingRef.current = false;
+      setIsLoadingAudio(false);
       return;
     }
 
     setIsTTSActive(true);
+    setIsLoadingAudio(true);
     
     if (!hasPlayedIntro) {
       // Play full intro on first tap
       isSpeakingRef.current = true;
-      speak("Welcome to QuizVision. Please speak your quiz code when ready. Or type it in the box. Say the code like Q-U-I-Z-1-2-3-4.", () => {
+      speak("Welcome to Quiz Vision. Please speak your quiz code when ready. Or type it in the box. Say the code like Q-U-I-Z-1-2-3-4.", () => {
         isSpeakingRef.current = false;
         setIsTTSActive(false);
+        setIsLoadingAudio(false);
         setHasPlayedIntro(true);
       });
     } else {
@@ -332,6 +427,7 @@ const QuizVision: React.FC = () => {
       speak(message, () => {
         isSpeakingRef.current = false;
         setIsTTSActive(false);
+        setIsLoadingAudio(false);
       });
     }
   };
@@ -360,7 +456,7 @@ const QuizVision: React.FC = () => {
     }
 
     // Wait for speech to finish before starting recognition
-    if (isSpeakingRef.current || speechSynthesis.speaking) {
+    if (isSpeakingRef.current || isLoadingAudio) {
       setTimeout(() => startSpeechRecognition(mode), 200);
       return;
     }
@@ -405,12 +501,14 @@ const QuizVision: React.FC = () => {
           // Now activate TTS to ask for confirmation
           isSpeakingRef.current = true;
           setIsTTSActive(true);
+          setIsLoadingAudio(true);
           speak(`Code recognized: ${processedText.split('').join(' ')}.`, () => {
             setTimeout(() => {
               setCurrentStep('confirm');
               speak(`Is this code correct? Say "yes" to proceed or "no" to try again.`, () => {
                 isSpeakingRef.current = false;
                 setIsTTSActive(false);
+                setIsLoadingAudio(false);
                 setIsConfirming(true);
                 setTimeout(() => {
                   startSpeechRecognition('confirm');
@@ -422,9 +520,11 @@ const QuizVision: React.FC = () => {
           // If no valid code, ask to try again with TTS
           isSpeakingRef.current = true;
           setIsTTSActive(true);
+          setIsLoadingAudio(true);
           speak("I couldn't recognize a valid quiz code. Please try again.", () => {
             isSpeakingRef.current = false;
             setIsTTSActive(false);
+            setIsLoadingAudio(false);
             setTimeout(() => {
               startSpeechRecognition('code');
             }, 1000);
@@ -442,9 +542,11 @@ const QuizVision: React.FC = () => {
           if (confirmedCode) {
             isSpeakingRef.current = true;
             setIsTTSActive(true);
+            setIsLoadingAudio(true);
             speak(`Great! Joining quiz ${confirmedCode.split('').join(' ')} now...`, () => {
               isSpeakingRef.current = false;
               setIsTTSActive(false);
+              setIsLoadingAudio(false);
               setCurrentStep('joining');
               setTimeout(() => {
                 handleJoinQuiz();
@@ -453,9 +555,11 @@ const QuizVision: React.FC = () => {
           } else {
             isSpeakingRef.current = true;
             setIsTTSActive(true);
+            setIsLoadingAudio(true);
             speak("I couldn't find a quiz code. Let's try again.", () => {
               isSpeakingRef.current = false;
               setIsTTSActive(false);
+              setIsLoadingAudio(false);
               setCurrentStep('listenCode');
               setJoinCodeWithRef('');
               setRecognizedText('');
@@ -467,9 +571,11 @@ const QuizVision: React.FC = () => {
         } else if (transcript.includes('no') || transcript.includes('wrong') || transcript.includes('try again')) {
           isSpeakingRef.current = true;
           setIsTTSActive(true);
+          setIsLoadingAudio(true);
           speak("Okay, let's try again. Please speak your quiz code.", () => {
             isSpeakingRef.current = false;
             setIsTTSActive(false);
+            setIsLoadingAudio(false);
             setCurrentStep('listenCode');
             setJoinCodeWithRef('');
             setRecognizedText('');
@@ -480,9 +586,11 @@ const QuizVision: React.FC = () => {
         } else {
           isSpeakingRef.current = true;
           setIsTTSActive(true);
+          setIsLoadingAudio(true);
           speak("I didn't understand. Please say 'yes' to proceed or 'no' to try again.", () => {
             isSpeakingRef.current = false;
             setIsTTSActive(false);
+            setIsLoadingAudio(false);
             setIsConfirming(true);
             setTimeout(() => {
               startSpeechRecognition('confirm');
@@ -529,9 +637,11 @@ const QuizVision: React.FC = () => {
       if (shouldRetry) {
         isSpeakingRef.current = true;
         setIsTTSActive(true);
+        setIsLoadingAudio(true);
         speak(errorMessage, () => {
           isSpeakingRef.current = false;
           setIsTTSActive(false);
+          setIsLoadingAudio(false);
           if (currentStep === 'confirm') {
             setIsConfirming(true);
             setTimeout(() => {
@@ -578,6 +688,7 @@ const QuizVision: React.FC = () => {
     speechSynthesis.cancel();
     isSpeakingRef.current = false;
     setIsTTSActive(false);
+    setIsLoadingAudio(false);
   };
 
   const handleStartVoiceFlow = (): void => {
@@ -588,7 +699,7 @@ const QuizVision: React.FC = () => {
 
     setHasStartedVoiceFlow(true);
     setCurrentStep('listenCode');
-    // Start listening immediately without TTS welcome message
+    // Start listening immediately
     setTimeout(() => {
       startSpeechRecognition('code');
     }, 500);
@@ -610,10 +721,12 @@ const QuizVision: React.FC = () => {
   };
 
   const handleReadCode = (): void => {
-    if ('speechSynthesis' in window && joinCode) {
+    if (joinCode) {
       setIsTTSActive(true);
+      setIsLoadingAudio(true);
       speak(`Your code is ${joinCode.split('').join(' ')}.`, () => {
         setIsTTSActive(false);
+        setIsLoadingAudio(false);
       });
     }
   };
@@ -628,9 +741,11 @@ const QuizVision: React.FC = () => {
         alert('Invalid code format. Please enter a valid alphanumeric code.');
         isSpeakingRef.current = true;
         setIsTTSActive(true);
+        setIsLoadingAudio(true);
         speak("Invalid code format detected. Please try again.", () => {
           isSpeakingRef.current = false;
           setIsTTSActive(false);
+          setIsLoadingAudio(false);
           setCurrentStep('listenCode');
           setJoinCodeWithRef('');
           setTimeout(() => {
@@ -642,9 +757,11 @@ const QuizVision: React.FC = () => {
       alert('Please enter quiz code.');
       isSpeakingRef.current = true;
       setIsTTSActive(true);
+      setIsLoadingAudio(true);
       speak("Quiz code is required.", () => {
         isSpeakingRef.current = false;
         setIsTTSActive(false);
+        setIsLoadingAudio(false);
         setCurrentStep('listenCode');
         setTimeout(() => {
           startSpeechRecognition('code');
@@ -656,7 +773,7 @@ const QuizVision: React.FC = () => {
   const getStepMessage = (): string => {
     switch(currentStep) {
       case 'welcome':
-        return '🎤 Welcome message playing...';
+        return isLoadingAudio ? '🎵 Welcome message playing...' : '🎵 Welcome message ready';
       case 'listenCode':
         return isListening ? '🎤 Listening for quiz code...' : '🎤 Ready to listen for quiz code';
       case 'confirm':
@@ -671,7 +788,7 @@ const QuizVision: React.FC = () => {
   const getStepIcon = (): JSX.Element => {
     switch(currentStep) {
       case 'welcome':
-        return <Volume2 size={16} className="text-blue-500 animate-pulse" />;
+        return <Volume2 size={16} className={isLoadingAudio ? "text-blue-500 animate-pulse" : "text-blue-500"} />;
       case 'listenCode':
         return <Mic size={16} className={isListening ? "text-red-500 animate-pulse" : "text-red-500"} />;
       case 'confirm':
@@ -721,13 +838,24 @@ const QuizVision: React.FC = () => {
         )}
 
         {/* TTS Status Indicator */}
-        {isTTSActive && (
+        {(isTTSActive || isLoadingAudio) && (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-center">
             <div className="flex items-center space-x-2">
-              <Volume2 className="text-blue-600 animate-pulse" size={20} />
-              <span className="text-sm font-medium text-blue-700">
-                🔊 Text-to-Speech is active...
-              </span>
+              {isLoadingAudio ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span className="text-sm font-medium text-blue-700">
+                    🔄 Loading audio from Coqui TTS...
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Volume2 className="text-blue-600 animate-pulse" size={20} />
+                  <span className="text-sm font-medium text-blue-700">
+                    🔊 Coqui TTS is active...
+                  </span>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -744,7 +872,7 @@ const QuizVision: React.FC = () => {
               <p className="text-gray-600 max-w-2xl mx-auto">
                 {hasStartedVoiceFlow ? 
                   "Speak your quiz code now" : 
-                  "Click 'Speak' button or start speaking your quiz code"}
+                  "Welcome! Listening will start after the greeting..."}
               </p>
               <div className="mt-4 flex items-center justify-center space-x-2 text-sm text-gray-500">
                 <VolumeX size={16} />
@@ -849,9 +977,13 @@ const QuizVision: React.FC = () => {
                   </label>
                   <div className="flex items-center space-x-2">
                     <span className="text-xs text-gray-500">
-                      {isListening ? 'Listening...' : hasStartedVoiceFlow ? 'Ready' : 'Loading...'}
+                      {isListening ? 'Listening...' : hasStartedVoiceFlow ? 'Ready' : isLoadingAudio ? 'Loading TTS...' : 'Initializing...'}
                     </span>
-                    <div className={`w-2 h-2 rounded-full ${isListening ? 'bg-red-500 animate-pulse' : hasStartedVoiceFlow ? 'bg-green-500' : 'bg-blue-500 animate-pulse'}`}></div>
+                    <div className={`w-2 h-2 rounded-full ${
+                      isListening ? 'bg-red-500 animate-pulse' : 
+                      hasStartedVoiceFlow ? 'bg-green-500' : 
+                      isLoadingAudio ? 'bg-blue-500 animate-pulse' : 'bg-blue-500'
+                    }`}></div>
                   </div>
                 </div>
                 
@@ -879,9 +1011,9 @@ const QuizVision: React.FC = () => {
                   <div className="flex space-x-2">
                     <button
                       onClick={handleVoiceInputCode}
-                      disabled={!browserSupported}
+                      disabled={!browserSupported || isLoadingAudio}
                       className={`px-4 py-2 text-sm rounded-lg transition-all flex items-center space-x-2 ${
-                        !browserSupported ? 'bg-gray-100 text-gray-400 cursor-not-allowed' :
+                        !browserSupported || isLoadingAudio ? 'bg-gray-100 text-gray-400 cursor-not-allowed' :
                         isListening 
                           ? 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100' 
                           : 'bg-blue-50 border border-blue-200 text-[#2563eb] hover:bg-blue-100'
@@ -896,10 +1028,10 @@ const QuizVision: React.FC = () => {
                     </button>
                     <button
                       onClick={handleReadCode}
-                      disabled={!joinCode}
-                      className={`px-3 py-2 text-sm rounded-lg transition-all flex items-center space-x-1 ${joinCode 
-                        ? 'bg-blue-50 border border-blue-200 text-[#2563eb] hover:bg-blue-100' 
-                        : 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                      disabled={!joinCode || isLoadingAudio}
+                      className={`px-3 py-2 text-sm rounded-lg transition-all flex items-center space-x-1 ${
+                        !joinCode || isLoadingAudio ? 'bg-gray-50 text-gray-400 cursor-not-allowed' :
+                        'bg-blue-50 border border-blue-200 text-[#2563eb] hover:bg-blue-100'
                       }`}
                       aria-label="Read code aloud"
                     >
@@ -908,7 +1040,9 @@ const QuizVision: React.FC = () => {
                     </button>
                     <button
                       onClick={handleTapToStartTTS}
+                      disabled={isLoadingAudio}
                       className={`px-3 py-2 text-sm rounded-lg transition-all flex items-center space-x-1 ${
+                        isLoadingAudio ? 'bg-gray-100 text-gray-400 cursor-not-allowed' :
                         isTTSActive 
                           ? 'bg-amber-50 border border-amber-200 text-amber-600 hover:bg-amber-100' 
                           : 'bg-blue-50 border border-blue-200 text-[#2563eb] hover:bg-blue-100'
@@ -935,9 +1069,9 @@ const QuizVision: React.FC = () => {
             <div className="max-w-xl mx-auto space-y-4">
               <button
                 onClick={handleJoinQuiz}
-                disabled={!joinCode || currentStep === 'joining'}
+                disabled={!joinCode || currentStep === 'joining' || isLoadingAudio}
                 className={`w-full py-4 rounded-xl font-semibold text-base transition-all ${
-                  joinCode && currentStep !== 'joining'
+                  joinCode && currentStep !== 'joining' && !isLoadingAudio
                     ? 'bg-gradient-to-r from-[#2563eb] to-[#3b82f6] hover:from-[#1d4ed8] hover:to-[#2563eb] text-white shadow-sm hover:shadow transform hover:-translate-y-0.5' 
                     : currentStep === 'joining'
                     ? 'bg-emerald-500 text-white cursor-wait'
@@ -959,7 +1093,11 @@ const QuizVision: React.FC = () => {
               
               <div className="pt-4 border-t border-gray-100">
                 <p className="text-xs text-gray-500 text-center">
-                  {isListening ? (
+                  {isLoadingAudio && currentStep === 'welcome' ? (
+                    <span className="text-blue-600 font-medium">
+                      🔊 Playing welcome message with Coqui TTS...
+                    </span>
+                  ) : isListening ? (
                     isConfirming ? (
                       <span className="text-amber-600 font-medium">
                         🎤 Say "yes" to proceed or "no" to try again...
@@ -977,7 +1115,7 @@ const QuizVision: React.FC = () => {
                     hasStartedVoiceFlow ? (
                       <span className="font-medium">🎤 Ready to listen for your code • Tap anywhere for instructions</span>
                     ) : (
-                      <span className="font-medium">🎤 Click "Speak" to start voice input • Tap anywhere for instructions</span>
+                      <span className="font-medium">🎤 Welcome message playing • Tap anywhere for instructions</span>
                     )
                   ) : (
                     <span className="font-medium">Tap anywhere on the page to hear instructions</span>

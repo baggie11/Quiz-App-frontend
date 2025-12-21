@@ -1,10 +1,10 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import LandingPage from "./pages/LandingPage";
 import HostAuthPage from "./pages/AuthPage";
 import DashboardPage from "./pages/Dashboard";
 import QuestionBuilderWrapper from "./pages/QuestionBuilderPageWrapper";
 import QuizVisionHome from "./pages/Role";
 import SimpleTTS from "./pages/Simpletts";
+import QuizVision from "./pages/LandingPage";
 
 function App() {
   return (
@@ -12,6 +12,7 @@ function App() {
       <Routes>
         {/* Landing Page */}
         <Route path = "/" element = {<QuizVisionHome/>}/>
+        <Route path = "/join-session" element = {<QuizVision/>}/>
         <Route path = "/auth" element = {<HostAuthPage/>}/>
         <Route path = "/dashboard" element = {<DashboardPage/>}/>
         <Route path="/session/:sessionId/questions" element={<QuestionBuilderWrapper />} />
