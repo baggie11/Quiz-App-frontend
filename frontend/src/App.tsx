@@ -3,17 +3,19 @@ import LandingPage from "./pages/LandingPage";
 import HostAuthPage from "./pages/AuthPage";
 import DashboardPage from "./pages/Dashboard";
 import QuestionBuilderWrapper from "./pages/QuestionBuilderPageWrapper";
+import QuizVisionHome from "./pages/Role";
+import SimpleTTS from "./pages/Simpletts";
 
 function App() {
   return (
     <Router>
       <Routes>
         {/* Landing Page */}
-        <Route path="/" element={<LandingPage />} />
+        <Route path = "/" element = {<QuizVisionHome/>}/>
         <Route path = "/auth" element = {<HostAuthPage/>}/>
         <Route path = "/dashboard" element = {<DashboardPage/>}/>
         <Route path="/session/:sessionId/questions" element={<QuestionBuilderWrapper />} />
-
+        <Route path = "/simpletts" element = {<SimpleTTS/>}/>
         {/* Add more routes below when you create new pages */}
         {/* <Route path="/dashboard" element={<Dashboard />} /> */}
         {/* <Route path="/login" element={<Login />} /> */}
