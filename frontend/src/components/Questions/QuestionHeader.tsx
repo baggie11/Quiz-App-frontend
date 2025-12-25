@@ -14,8 +14,8 @@ import {
 interface QuestionHeaderProps {
   onPreview: () => void;
   onSaveAll: () => void;
-  onExport: () => void;
-  onImport: () => void;
+  onExport?: () => void;
+  onImport?: () => void;
   saving: boolean;
   questionsCount?: number;
   unsavedCount?: number;
@@ -72,22 +72,22 @@ export const QuestionHeader: React.FC<QuestionHeaderProps> = ({
     if (saveError) return <AlertCircle className="w-3.5 h-3.5 text-red-500" />;
     if (saving) return <Clock className="w-3.5 h-3.5 text-blue-500 animate-pulse" />;
     if (hasUnsavedChanges) return <Clock className="w-3.5 h-3.5 text-amber-500" />;
-    return <CheckCircle className="w-3.5 h-3.5 text-green-500" />;
+    {/*return <CheckCircle className="w-3.5 h-3.5 text-green-500" />;*/}
   };
 
   const getSaveStatusText = () => {
     if (saveError) return 'Save error';
     if (saving) return 'Saving...';
     if (hasUnsavedChanges) return 'Unsaved changes';
-    return 'All saved';
+    
   };
 
   return (
-    <div className="px-4 py-3">
+    <div className="px-0 py-2 rounded-2xl">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div>
-            <h1 className="text-lg font-bold text-gray-900">Question Builder</h1>
+            
             <div className="flex items-center gap-2 text-xs text-gray-500">
               {sessionId && (
                 <>

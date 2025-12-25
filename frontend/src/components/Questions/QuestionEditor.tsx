@@ -162,6 +162,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
               placeholder="Enter your question here..."
             />
           </div>
+          
 
           {/* Question Type Specific Content */}
           {(question.type === 'quiz' || question.type === 'multi') && (
@@ -268,7 +269,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                 </div>
               )}
 
-              {/* Add Option Button (when options exist) */}
+              {/* Add Option Button (when options exist) 
               {question.options && question.options.length > 0 && question.options.length < 10 && (
                 <button
                   onClick={() => onAddOption(question.id)}
@@ -277,7 +278,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                   <Plus className="w-4 h-4" />
                   Add Another Option
                 </button>
-              )}
+              )}*/}
 
               {/* Maximum options warning */}
               {question.options && question.options.length >= 10 && (

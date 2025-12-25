@@ -4,7 +4,7 @@ import { QuestionHeader } from '../components/Questions/QuestionHeader';
 import { QuestionPalette } from '../components/Questions/QuestionPalette';
 import { QuestionEditor } from '../components/Questions/QuestionEditor';
 import { QuestionPreview } from '../components/Questions/QuestionPreview';
-import { useDebounce } from '../hooks/useDebounce';
+/*import { useDebounce } from '../hooks/useDebounce';*/
 
 // Helper functions
 const uid = (p = "q") => `${p}_${Date.now().toString(36)}_${Math.floor(Math.random() * 1000)}`;
@@ -33,11 +33,11 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
   });
   
   const previewModalRef = useRef<HTMLDivElement>(null);
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSaveTimerRef = useRef<number | null>(null);
   const isInitialMount = useRef(true);
   
   // Debounced questions for auto-save
-  const debouncedQuestions = useDebounce(questions, autoSaveInterval);
+  /*const debouncedQuestions = useDebounce(questions, autoSaveInterval);
 
   // Load saved state from localStorage on mount
   useEffect(() => {
@@ -93,7 +93,7 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
         console.error('Failed to auto-save:', error);
       }
     }
-  }, [debouncedQuestions, sessionId]);
+  }, [debouncedQuestions, sessionId]);*/
 
   // Auto-save to server when there are unsaved changes
   useEffect(() => {
@@ -423,181 +423,146 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
   );
 
   return (
-    <div className="relative">
-      {/* Save Indicator */}
-      
-      {/* Fixed Header Container */}
-      <div className="sticky top-0 z-40 bg-white border-b shadow-sm">
-        <div className="w-[800px] mx-auto px-0">
-          <QuestionHeader 
-            onPreview={handlePreview}
-            onSaveAll={handleSaveAll}
-            saving={saveState.isSaving}
-            questionsCount={questions.length}
-            sessionId={sessionId}
-            unsavedCount={unsavedQuestionsCount}
-            lastSaved={saveState.lastSaved}
-            onExport={handleExportQuestions}
-            onImport={() => {
-              // This would trigger a file input in a real implementation
-              const sampleQuestions: Question[] = [
-                {
-                  id: uid(),
-                  text: "Sample imported question",
-                  type: "quiz",
-                  options: ["Option A", "Option B", "Option C"],
-                  correctAnswer: 1,
-                  meta: {},
-                },
-              ];
-              handleImportQuestions(sampleQuestions);
-            }}
-          />
-          
-          {/* Filter Tabs */}
-          <div className="px-4 pb-3">
-            <div className="flex gap-2 flex-wrap">
-              {["all", "quiz", "multi", "rating", "open", "drafts"].map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f as any)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    filter === f 
-                      ? 'bg-indigo-600 text-white shadow-sm' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {f.charAt(0).toUpperCase() + f.slice(1)}
-                  {f === "drafts" && unsavedQuestionsCount > 0 && (
-                    <span className="ml-1.5 px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-xs">
-                      {unsavedQuestionsCount}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+  <div className="min-h-screen bg-gray-50">
+    {/* ===== Top Header (ONLY branding + save status) ===== */}
+    <div className="sticky top-0 z-40 bg-white border-b">
+      <div className="max-w-7xl mx-auto px-6 py-3">
+        <QuestionHeader
+          onPreview={handlePreview}
+          onSaveAll={handleSaveAll}
+          saving={saveState.isSaving}
+          questionsCount={questions.length}
+          unsavedCount={unsavedQuestionsCount}
+          lastSaved={saveState.lastSaved}
+          autoSaveEnabled={saveState.autoSaveEnabled}
+          onToggleAutoSave={toggleAutoSave}
+          hasUnsavedChanges={saveState.hasUnsavedChanges}
+          saveError={saveState.saveError}
+          sessionId={sessionId}
+        />
       </div>
+    </div>
 
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-6">
-          {/* Left Sidebar - Palette */}
-          <div className="lg:w-64">
-            <QuestionPalette
-              isOpen={paletteOpen}
-              onToggle={() => setPaletteOpen(!paletteOpen)}
-              onDragStart={onPaletteDragStart}
-              onAddQuestion={addQuestion}
-            />
-          </div>
+    {/* ===== CONTROL CARD (Stats + Preview + Filters) ===== */}
+    <div className="max-w-7xl mx-auto px-6 mt-4">
+      <div className="bg-white rounded-2xl shadow-sm p-4 space-y-2">
+        
+        {/* Top Row: Stats + Actions */}
+        <div className="flex flex-wrap items-center gap-5">
+          <div className="flex items-center gap-5">
+            {/*<div className="px-3 py-1.5 bg-gray-100 rounded-lg text-sm font-medium">
+              {questions.length} Questions
+            </div>*/}
 
-          {/* Main Content - Questions Canvas */}
-          <main className="flex-1 space-y-5">
-            {filteredQuestions.length === 0 ? (
-              <div className="p-8 bg-white rounded-2xl border border-gray-100 text-center">
-                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No questions found</h3>
-                <p className="text-gray-500 mb-4">
-                  {filter === "all" 
-                    ? "Add your first question from the palette or click below." 
-                    : `No ${filter} questions. Try a different filter or add a new question.`}
-                </p>
-                <button
-                  onClick={() => addQuestion("quiz")}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors"
-                >
-                  + Add Question
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-5">
-                {filteredQuestions.map((q, idx) => (
-                  <div key={q.id} className="relative group">
-                    <QuestionEditor
-                      question={q}
-                      index={idx}
-                      onUpdate={updateQuestion}
-                      onAddOption={addOption}
-                      onUpdateOption={updateOption}
-                      onRemoveOption={removeOption}
-                      onDragOver={onDragOver}
-                      onDropChangeType={onDropChangeType}
-                    />
-                  </div>
-                ))}
+            {unsavedQuestionsCount > 0 && (
+              <div className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium">
+                {unsavedQuestionsCount} Drafts
               </div>
             )}
+          </div>
 
-            {/* Mobile Floating Add Button */}
-            <div className="lg:hidden fixed bottom-6 right-6 z-30">
-              <button
-                onClick={() => addQuestion("quiz")}
-                className="w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-colors flex items-center justify-center"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Desktop Add Question Button */}
+          {/*<div className="flex items-center gap-2">
             <button
-              onClick={() => addQuestion("quiz")}
-              className="hidden lg:block w-full p-6 border-2 border-dashed border-gray-300 rounded-2xl hover:border-indigo-400 hover:bg-indigo-50 transition-all text-gray-600 hover:text-indigo-600"
+              onClick={handlePreview}
+              className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm font-medium"
             >
-              <div className="flex items-center justify-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add New Question
-              </div>
+              Preview
             </button>
-          </main>
+
+            <button
+              onClick={handleSaveAll}
+              disabled={!saveState.hasUnsavedChanges || saveState.isSaving}
+              className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                saveState.hasUnsavedChanges
+                  ? "bg-green-600 text-white hover:bg-green-700"
+                  : "bg-green-100 text-green-700 cursor-not-allowed"
+              }`}
+            >
+              {saveState.isSaving ? "Saving..." : "Save"}
+            </button>
+          </div> */}
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="flex gap-2">
+          {["all", "quiz", "multi", "rating", "open", "drafts"].map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f as any)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                filter === f
+                  ? "bg-indigo-600 text-white"
+                  : "bg-gray-100 hover:bg-gray-200"
+              }`}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
         </div>
       </div>
-
-      {/* Preview Modal */}
-      <QuestionPreview
-        isOpen={previewOpen}
-        questions={questions}
-        onClose={() => setPreviewOpen(false)}
-        ref={previewModalRef}
-      />
-
-      {/* Save All Floating Button */}
-      {saveState.hasUnsavedChanges && (
-        <button
-          onClick={handleSaveAll}
-          disabled={saveState.isSaving}
-          className={`fixed bottom-8 right-8 px-6 py-3 rounded-full shadow-lg font-medium flex items-center gap-2 transition-all z-50 ${
-            saveState.isSaving
-              ? 'bg-gray-600 cursor-not-allowed'
-              : 'bg-green-600 hover:bg-green-700'
-          } text-white`}
-        >
-          {saveState.isSaving ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              Saving...
-            </>
-          ) : (
-            <>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Save All Changes
-            </>
-          )}
-        </button>
-      )}
     </div>
-  );
+
+    {/* ===== MAIN BUILDER AREA ===== */}
+    <div className="max-w-7xl mx-auto px-6 mt-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
+        
+        {/* Palette */}
+        <aside className="sticky top-32 self-start">
+          <QuestionPalette
+            isOpen={paletteOpen}
+            onToggle={() => setPaletteOpen(!paletteOpen)}
+            onDragStart={onPaletteDragStart}
+            onAddQuestion={addQuestion}
+          />
+        </aside>
+
+        {/* Question Canvas */}
+        <main className="flex-1 overflow-y-auto p-4 space-y-5">
+          {filteredQuestions.length === 0 ? (
+            <div className="bg-white border border-dashed rounded-2xl p-10 text-center">
+              <h3 className="text-lg font-semibold">No questions</h3>
+              <p className="text-gray-500 mt-2">
+                Add a question from the palette
+              </p>
+            </div>
+          ) : (
+            filteredQuestions.map((q, idx) => (
+              <QuestionEditor
+                key={q.id}
+                question={q}
+                index={idx}
+                onUpdate={updateQuestion}
+                onAddOption={addOption}
+                onUpdateOption={updateOption}
+                onRemoveOption={()=>removeOption}
+                onDragOver={onDragOver}
+                onDropChangeType={onDropChangeType}
+              />
+            ))
+          )}
+
+          {/* Desktop Add */}
+          {filter==="all"&&(
+          <button
+            onClick={() => addQuestion("quiz")}
+            className="hidden lg:block w-full py-6 border-2 border-dashed rounded-2xl hover:bg-gray-50"
+          >
+            + Add Question
+          </button>)}
+        </main>
+      </div>
+    </div>
+
+    {/* Preview */}
+    <QuestionPreview
+      isOpen={previewOpen}
+      questions={questions}
+      onClose={() => setPreviewOpen(false)}
+    />
+  </div>
+);
+
+
 };
 
 export default QuestionBuilderPage;
