@@ -4,9 +4,18 @@ import { logActivity, getLatestQuestionStart } from "../db/session_activity.repo
 import { getQuestionById } from "../db/questions.repo.js";
 
 /**
+ * Check if the session exists by its join code
+**/
+
+export async function checkSessionExists(joinCode){
+  const session = await getSessionByJoinCode(joinCode);
+  return !!session;
+}
+
+/**
  * Participant joins a session using join code
  */
-export async function joinSession({ joinCode, nickname, userId = null }) {
+export async function joinSession({ joinCode, userId = null }) {
   // Find session
   const session = await getSessionByJoinCode(joinCode);
   if (!session) throw new Error("Session not found");
@@ -110,5 +119,6 @@ export async function listTeacherSessions(teacherId){
     throw new Error("Teacher ID is required");
   }
   const sessions = await getSessionsByTeacherId(teacherId);
+  console.log("In sessions service:" , sessions);
   return sessions;
 }

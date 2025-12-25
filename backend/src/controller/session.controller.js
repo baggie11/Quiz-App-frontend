@@ -1,6 +1,33 @@
 import { joinSession, getSessionStatus } from "../services/session.service.js";
 import { addSession, fetchSession } from '../services/session.service.js';
-import { listTeacherSessions } from "../services/session.service.js";
+import { listTeacherSessions, checkSessionExists } from "../services/session.service.js";
+
+/**
+ * POST /session/join
+ **/
+
+export async function checkSessionExistsController(req, res) {
+  try {
+    const { joinCode } = req.body;
+    if (!joinCode) {
+      return res.status(400).json({
+        status: "fail",
+        message: "joinCode is required",
+      });
+    }
+    const exists = await checkSessionExists(joinCode);
+    return res.status(200).json({
+      status: "ok",
+      data: { exists },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
+  }
+}
+
 /**
  * POST /join
  * Body: { joinCode, nickname, userId (optional) }
