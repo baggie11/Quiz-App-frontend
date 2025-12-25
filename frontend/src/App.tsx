@@ -5,6 +5,7 @@ import QuestionBuilderWrapper from "./pages/QuestionBuilderPageWrapper";
 import QuizVisionHome from "./pages/Role";
 import SimpleTTS from "./pages/Simpletts";
 import QuizVision from "./pages/LandingPage";
+import RollNumberVision from "./pages/NamePage";
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path = "/dashboard" element = {<DashboardPage/>}/>
         <Route path="/session/:sessionId/questions" element={<QuestionBuilderWrapper />} />
         <Route path = "/simpletts" element = {<SimpleTTS/>}/>
+        <Route path = "/enter-name" element = {<RollNumberVision/>}/>
         {/* Add more routes below when you create new pages */}
         {/* <Route path="/dashboard" element={<Dashboard />} /> */}
         {/* <Route path="/login" element={<Login />} /> */}

@@ -242,7 +242,7 @@ const QuizVisionHome: React.FC = () => {
           // Fallback: redirect after delay
           console.log('Audio error, fallback redirect in 1.5 seconds');
           timeoutRef.current = setTimeout(() => {
-            navigate('/join-quiz');
+            navigate('/join-session');
           }, 1500);
         };
         

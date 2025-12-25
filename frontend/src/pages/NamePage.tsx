@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, type ChangeEvent, type JSX } from 'react';
-import {useNavigate} from 'react-router-dom';
 import { 
   Mic, 
   Headphones, 
@@ -9,12 +8,13 @@ import {
   Accessibility,
   Users,
   Brain,
-  Hash,
+  User,
   Volume2,
   ThumbsUp,
   ThumbsDown,
   AlertCircle,
-  VolumeX
+  VolumeX,
+  Hash
 } from 'lucide-react';
 
 // Define types for Speech Recognition API
@@ -59,12 +59,6 @@ declare global {
   }
 }
 
-// Add missing function: speakWithRetry
-const speakWithRetry = (text: string, callback?: () => void): void => {
-  console.log('Attempting to speak with retry:', text);
-  speak(text, callback);
-};
-
 // Speak utility function using Coqui TTS
 const speakWithCoqui = async (text: string, callback?: () => void): Promise<void> => {
   try {
@@ -88,22 +82,16 @@ const speakWithCoqui = async (text: string, callback?: () => void): Promise<void
       throw new Error('Received empty audio file');
     }
     
-    // Create object URL from blob
     const audioUrl = URL.createObjectURL(audioBlob);
-    
-    // Create audio element
     const audio = new Audio(audioUrl);
     
-    // Set up event handlers
     audio.onplay = () => {
       console.log('Coqui TTS: Audio playback started');
     };
     
     audio.onended = () => {
       console.log('Coqui TTS: Audio playback finished');
-      // Clean up object URL
       URL.revokeObjectURL(audioUrl);
-      // Call callback if provided
       if (callback) {
         callback();
       }
@@ -112,19 +100,14 @@ const speakWithCoqui = async (text: string, callback?: () => void): Promise<void
     audio.onerror = (event) => {
       console.error('Coqui TTS: Audio playback error:', event);
       URL.revokeObjectURL(audioUrl);
-      // Fallback to browser TTS if Coqui fails
-      console.log('Coqui TTS failed, falling back to browser TTS');
       fallbackSpeak(text, callback);
     };
     
-    // Play the audio
     console.log('Coqui TTS: Playing audio...');
     await audio.play();
     
   } catch (error) {
     console.error('Coqui TTS Error:', error);
-    // Fallback to browser TTS
-    console.log('Coqui TTS failed, falling back to browser TTS');
     fallbackSpeak(text, callback);
   }
 };
@@ -163,13 +146,13 @@ const Navbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#2563eb] to-[#3b82f6] rounded-xl flex items-center justify-center shadow-md">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#9333ea] to-[#a855f7] rounded-xl flex items-center justify-center shadow-md">
               <Brain className="text-white" size={24} />
             </div>
-            <span className="text-2xl font-bold text-gray-900">QuizVision</span>
+            <span className="text-2xl font-bold text-gray-900">RollNumberVision</span>
           </div>
           <div className="flex items-center space-x-6">
-            <button className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-[#2563eb] transition-colors">
+            <button className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-[#9333ea] transition-colors">
               <Accessibility size={20} />
               <span className="text-sm font-medium">Accessibility</span>
             </button>
@@ -188,54 +171,54 @@ const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div>
             <div className="flex items-center space-x-2 mb-4">
-              <Brain className="text-[#2563eb]" size={24} />
-              <span className="font-bold text-gray-900">QuizVision</span>
+              <Brain className="text-[#9333ea]" size={24} />
+              <span className="font-bold text-gray-900">RollNumberVision</span>
             </div>
-            <p className="text-sm text-gray-600">Making assessments accessible for everyone.</p>
+            <p className="text-sm text-gray-600">Making student identification accessible for everyone.</p>
           </div>
           
           <div>
             <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
-              <Globe size={16} className="mr-2 text-[#2563eb]" />
+              <Globe size={16} className="mr-2 text-[#9333ea]" />
               Features
             </h3>
             <ul className="space-y-2 text-sm text-gray-600">
               <li>Voice Input</li>
               <li>Text-to-Speech</li>
-              <li>High Contrast Mode</li>
+              <li>Number Recognition</li>
             </ul>
           </div>
           
           <div>
             <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
-              <Shield size={16} className="mr-2 text-[#2563eb]" />
-              Accessibility
+              <Shield size={16} className="mr-2 text-[#9333ea]" />
+              Privacy
             </h3>
             <ul className="space-y-2 text-sm text-gray-600">
-              <li>WCAG 2.1 Compliant</li>
-              <li>Screen Reader Support</li>
-              <li>Keyboard Navigation</li>
+              <li>Secure Data Handling</li>
+              <li>Local Processing</li>
+              <li>No Data Storage</li>
             </ul>
           </div>
           
           <div>
             <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
-              <Users size={16} className="mr-2 text-[#2563eb]" />
+              <Users size={16} className="mr-2 text-[#9333ea]" />
               Support
             </h3>
             <ul className="space-y-2 text-sm text-gray-600">
-              <li>Documentation</li>
-              <li>Help Center</li>
-              <li>Contact Us</li>
+              <li>Help Guide</li>
+              <li>Contact Support</li>
+              <li>FAQs</li>
             </ul>
           </div>
         </div>
         
         <div className="pt-8 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-sm text-gray-600">© 2024 QuizVision. All rights reserved.</p>
+          <p className="text-sm text-gray-600">© 2024 RollNumberVision. All rights reserved.</p>
           <div className="flex space-x-6 mt-4 md:mt-0">
-            <a href="#" className="text-sm text-gray-600 hover:text-[#2563eb]">Privacy Policy</a>
-            <a href="#" className="text-sm text-gray-600 hover:text-[#2563eb]">Terms of Service</a>
+            <a href="#" className="text-sm text-gray-600 hover:text-[#9333ea]">Privacy Policy</a>
+            <a href="#" className="text-sm text-gray-600 hover:text-[#9333ea]">Terms of Service</a>
           </div>
         </div>
       </div>
@@ -244,14 +227,14 @@ const Footer: React.FC = () => {
 };
 
 // Main Component
-const QuizVision: React.FC = () => {
+const RollNumberVision: React.FC = () => {
   // State declarations
-  const [joinCode, setJoinCode] = useState<string>('');
+  const [rollNumber, setRollNumber] = useState<string>('');
   const [isListening, setIsListening] = useState<boolean>(false);
   const [speechError, setSpeechError] = useState<string>('');
   const [recognizedText, setRecognizedText] = useState<string>('');
   const [audioLevel, setAudioLevel] = useState<number>(0);
-  const [currentStep, setCurrentStep] = useState<'welcome' | 'listenCode' | 'confirm' | 'joining'>('welcome');
+  const [currentStep, setCurrentStep] = useState<'welcome' | 'listenNumber' | 'confirm' | 'verifying'>('welcome');
   const [confirmationText, setConfirmationText] = useState<string>('');
   const [isConfirming, setIsConfirming] = useState<boolean>(false);
   const [browserSupported, setBrowserSupported] = useState<boolean>(true);
@@ -260,21 +243,27 @@ const QuizVision: React.FC = () => {
   const [isTTSActive, setIsTTSActive] = useState<boolean>(false);
   const [hasPlayedIntro, setHasPlayedIntro] = useState<boolean>(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState<boolean>(false);
+  const [rollNumberType, setRollNumberType] = useState<'numeric' | 'alphanumeric' | 'unknown'>('unknown');
 
   // Refs
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const joinCodeRef = useRef<string>('');
+  const rollNumberRef = useRef<string>('');
   const isSpeakingRef = useRef<boolean>(false);
   const mainContentRef = useRef<HTMLDivElement>(null);
 
-  const navigate = useNavigate();
-
-  const setJoinCodeWithRef = (code: string): void => {
-    setJoinCode(code);
-    joinCodeRef.current = code;
+  const setRollNumberWithRef = (number: string): void => {
+    setRollNumber(number);
+    rollNumberRef.current = number;
+    
+    // Detect roll number type for better TTS pronunciation
+    if (/^\d+$/.test(number)) {
+      setRollNumberType('numeric');
+    } else if (/^[A-Z0-9]+$/i.test(number)) {
+      setRollNumberType('alphanumeric');
+    }
   };
 
   // Auto-start TTS when component mounts
@@ -287,22 +276,19 @@ const QuizVision: React.FC = () => {
       return;
     }
 
-    // Check if page is HTTPS or localhost
     const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
     if (!isSecure && SpeechRecognition) {
       setSpeechError('Speech recognition requires HTTPS. This feature may not work on HTTP.');
     }
 
-    // Auto-start TTS welcome message after a short delay
+    // Auto-start TTS welcome message
     const startTimer = setTimeout(() => {
       playWelcomeMessage();
-    }, 1000); // 1 second delay
+    }, 1000);
 
-    // Add click listener to main content
     const mainContent = mainContentRef.current;
     const handleMainContentClick = (e: Event) => {
       const target = e.target as HTMLElement;
-      // Prevent triggering on input field clicks to avoid interrupting typing
       if (target.tagName !== 'INPUT' && 
           target.tagName !== 'BUTTON' &&
           !target.closest('button') &&
@@ -336,7 +322,7 @@ const QuizVision: React.FC = () => {
     
     console.log('Playing welcome message with Coqui TTS...');
     
-    speak("Welcome to Quiz Vision. Speak out your session code.", () => {
+    speak("Please speak your roll number", () => {
       console.log('Welcome message finished');
       setIsTTSActive(false);
       setIsLoadingAudio(false);
@@ -395,9 +381,9 @@ const QuizVision: React.FC = () => {
     }
   };
 
-  const handleJoinCodeChange = (e: ChangeEvent<HTMLInputElement>): void => {
+  const handleRollNumberChange = (e: ChangeEvent<HTMLInputElement>): void => {
     const value = e.target.value.toUpperCase();
-    setJoinCodeWithRef(value);
+    setRollNumberWithRef(value);
     setSpeechError('');
   };
 
@@ -417,7 +403,7 @@ const QuizVision: React.FC = () => {
     if (!hasPlayedIntro) {
       // Play full intro on first tap
       isSpeakingRef.current = true;
-      speak("Welcome to Quiz Vision. Please speak your quiz code when ready. Or type it in the box. Say the code like Q-U-I-Z-1-2-3-4.", () => {
+      speak("Welcome to Roll Number Vision. Please speak your roll number when ready. Or type it in the box. For example: 2-0-2-3-0-0-1 or C-S-E-2-0-2-3-0-1.", () => {
         isSpeakingRef.current = false;
         setIsTTSActive(false);
         setIsLoadingAudio(false);
@@ -427,10 +413,14 @@ const QuizVision: React.FC = () => {
       // Play context-aware message on subsequent taps
       let message = '';
       
-      if (joinCode) {
-        message = `Current code is ${joinCode.split('').join(' ')}. ${currentStep === 'confirm' ? 'Say yes to confirm or no to change it.' : 'Click speak to start voice input or type to edit.'}`;
+      if (rollNumber) {
+        const formattedNumber = rollNumberType === 'numeric' 
+          ? rollNumber.split('').join('-')
+          : rollNumber.split('').join(' ');
+        
+        message = `Current roll number is ${formattedNumber}. ${currentStep === 'confirm' ? 'Say yes to confirm or no to change it.' : 'Click speak to start voice input or type to edit.'}`;
       } else {
-        message = 'Ready for your quiz code. Speak or type it now.';
+        message = 'Ready for your roll number. Speak or type it now. For example: 2-0-2-3-0-0-1 or C-S-E-2-0-2-3-0-1.';
       }
       
       isSpeakingRef.current = true;
@@ -442,10 +432,10 @@ const QuizVision: React.FC = () => {
     }
   };
 
-  const startSpeechRecognition = (mode: 'code' | 'confirm' = 'code'): void => {
+  const startSpeechRecognition = (mode: 'number' | 'confirm' = 'number'): void => {
     setSpeechError('');
     setRecognizedText('');
-    if (mode === 'code') {
+    if (mode === 'number') {
       setConfirmationText('');
     }
 
@@ -487,35 +477,54 @@ const QuizVision: React.FC = () => {
       const transcript = event.results[0][0].transcript.toLowerCase().trim();
       console.log('Recognized transcript:', transcript);
       
-      if (mode === 'code') {
+      if (mode === 'number') {
         let processedText = transcript
           .toUpperCase()
           .replace(/\s+/g, '')
-          .replace(/[^A-Z0-9]/g, '')
+          .replace(/[^A-Z0-9-]/g, '')
+          .replace(/-+/g, '')
           .trim();
         
         console.log('Processed text:', processedText);
         
-        const codeMatch = processedText.match(/[A-Z]{4}\d{4}|[A-Z0-9]{8}|[A-Z]{3,}\d{3,}/);
+        // Extract roll number patterns
+        const patterns = [
+          /[A-Z]{2,4}\d{6,8}/,  // CS2023001, EE2023001
+          /\d{7,10}/,           // 2023001, 20230001
+          /[A-Z]{1,2}\d{5,8}/,  // A2023001, AB2023001
+        ];
         
-        if (codeMatch) {
-          processedText = codeMatch[0];
-        } else if (processedText.length >= 4) {
-          processedText = processedText.substring(0, 8);
+        let matchedNumber = processedText;
+        for (const pattern of patterns) {
+          const match = processedText.match(pattern);
+          if (match) {
+            matchedNumber = match[0];
+            break;
+          }
+        }
+        
+        if (matchedNumber.length < 6) {
+          // If too short, take as much as we have
+          matchedNumber = matchedNumber.substring(0, 10);
         }
         
         setRecognizedText(transcript);
-        setJoinCodeWithRef(processedText);
+        setRollNumberWithRef(matchedNumber);
         
-        if (processedText) {
+        if (matchedNumber && matchedNumber.length >= 6) {
           // Now activate TTS to ask for confirmation
           isSpeakingRef.current = true;
           setIsTTSActive(true);
           setIsLoadingAudio(true);
-          speak(`Code recognized: ${processedText.split('').join(' ')}.`, () => {
+          
+          const ttsFormattedNumber = rollNumberType === 'numeric'
+            ? matchedNumber.split('').join('-')
+            : matchedNumber.split('').join(' ');
+          
+          speak(`Roll number recognized: ${ttsFormattedNumber}.`, () => {
             setTimeout(() => {
               setCurrentStep('confirm');
-              speak(`Is this code correct? Say "yes" to proceed or "no" to try again.`, () => {
+              speak(`Is this roll number correct? Say "yes" to proceed or "no" to try again.`, () => {
                 isSpeakingRef.current = false;
                 setIsTTSActive(false);
                 setIsLoadingAudio(false);
@@ -527,16 +536,16 @@ const QuizVision: React.FC = () => {
             }, 500);
           });
         } else {
-          // If no valid code, ask to try again with TTS
+          // If no valid number, ask to try again with TTS
           isSpeakingRef.current = true;
           setIsTTSActive(true);
           setIsLoadingAudio(true);
-          speak("I couldn't recognize a valid quiz code. Please try again.", () => {
+          speak("I couldn't recognize a valid roll number. Please try again, speaking clearly.", () => {
             isSpeakingRef.current = false;
             setIsTTSActive(false);
             setIsLoadingAudio(false);
             setTimeout(() => {
-              startSpeechRecognition('code');
+              startSpeechRecognition('number');
             }, 1000);
           });
         }
@@ -546,35 +555,40 @@ const QuizVision: React.FC = () => {
         console.log('Confirmation transcript:', transcript);
         
         if (transcript.includes('yes') || transcript.includes('correct') || transcript.includes('proceed')) {
-          const confirmedCode = joinCodeRef.current;
-          console.log('Confirmed code:', confirmedCode);
+          const confirmedNumber = rollNumberRef.current;
+          console.log('Confirmed roll number:', confirmedNumber);
           
-          if (confirmedCode) {
+          if (confirmedNumber) {
             isSpeakingRef.current = true;
             setIsTTSActive(true);
             setIsLoadingAudio(true);
-            speak(`Great! Joining quiz ${confirmedCode.split('').join(' ')} now...`, () => {
+            
+            const ttsFormattedNumber = rollNumberType === 'numeric'
+              ? confirmedNumber.split('').join('-')
+              : confirmedNumber.split('').join(' ');
+            
+            speak(`Great! Verifying roll number ${ttsFormattedNumber} now...`, () => {
               isSpeakingRef.current = false;
               setIsTTSActive(false);
               setIsLoadingAudio(false);
-              setCurrentStep('joining');
+              setCurrentStep('verifying');
               setTimeout(() => {
-                handleJoinQuiz();
+                handleVerifyRollNumber();
               }, 800);
             });
           } else {
             isSpeakingRef.current = true;
             setIsTTSActive(true);
             setIsLoadingAudio(true);
-            speak("I couldn't find a quiz code. Let's try again.", () => {
+            speak("I couldn't find a roll number. Let's try again.", () => {
               isSpeakingRef.current = false;
               setIsTTSActive(false);
               setIsLoadingAudio(false);
-              setCurrentStep('listenCode');
-              setJoinCodeWithRef('');
+              setCurrentStep('listenNumber');
+              setRollNumberWithRef('');
               setRecognizedText('');
               setTimeout(() => {
-                startSpeechRecognition('code');
+                startSpeechRecognition('number');
               }, 1000);
             });
           }
@@ -582,15 +596,15 @@ const QuizVision: React.FC = () => {
           isSpeakingRef.current = true;
           setIsTTSActive(true);
           setIsLoadingAudio(true);
-          speak("Okay, let's try again. Please speak your quiz code.", () => {
+          speak("Okay, let's try again. Please speak your roll number clearly.", () => {
             isSpeakingRef.current = false;
             setIsTTSActive(false);
             setIsLoadingAudio(false);
-            setCurrentStep('listenCode');
-            setJoinCodeWithRef('');
+            setCurrentStep('listenNumber');
+            setRollNumberWithRef('');
             setRecognizedText('');
             setTimeout(() => {
-              startSpeechRecognition('code');
+              startSpeechRecognition('number');
             }, 1000);
           });
         } else {
@@ -635,7 +649,6 @@ const QuizVision: React.FC = () => {
           errorMessage = 'Network error. Please check your internet connection.';
           break;
         case 'aborted':
-          // Don't show error for manual stops
           return;
         default:
           errorMessage = 'Error recognizing speech. Please try again.';
@@ -659,7 +672,7 @@ const QuizVision: React.FC = () => {
             }, 1000);
           } else {
             setTimeout(() => {
-              startSpeechRecognition('code');
+              startSpeechRecognition('number');
             }, 1000);
           }
         });
@@ -708,19 +721,19 @@ const QuizVision: React.FC = () => {
     }
 
     setHasStartedVoiceFlow(true);
-    setCurrentStep('listenCode');
+    setCurrentStep('listenNumber');
     // Start listening immediately
     setTimeout(() => {
-      startSpeechRecognition('code');
+      startSpeechRecognition('number');
     }, 500);
   };
 
-  const handleVoiceInputCode = (): void => {
+  const handleVoiceInputNumber = (): void => {
     if (isListening) {
       stopSpeechRecognition();
     } else {
-      if (currentStep === 'listenCode') {
-        startSpeechRecognition('code');
+      if (currentStep === 'listenNumber') {
+        startSpeechRecognition('number');
       } else if (currentStep === 'confirm') {
         setIsConfirming(true);
         startSpeechRecognition('confirm');
@@ -730,40 +743,46 @@ const QuizVision: React.FC = () => {
     }
   };
 
-  const handleReadCode = (): void => {
-    if (joinCode) {
+  const handleReadNumber = (): void => {
+    if (rollNumber) {
       setIsTTSActive(true);
       setIsLoadingAudio(true);
-      speak(`Your code is ${joinCode.split('').join(' ')}.`, () => {
+      
+      const ttsFormattedNumber = rollNumberType === 'numeric'
+        ? rollNumber.split('').join('-')
+        : rollNumber.split('').join(' ');
+      
+      speak(`Your roll number is ${ttsFormattedNumber}.`, () => {
         setIsTTSActive(false);
         setIsLoadingAudio(false);
       });
     }
   };
 
-  const handleJoinQuiz = async (): Promise<void> => {
-    const codeToJoin = joinCodeRef.current || joinCode;
+  const handleVerifyRollNumber = async (): Promise<void> => {
+    const numberToVerify = rollNumberRef.current || rollNumber;
 
-    if (!codeToJoin) {
-      alert('Please enter quiz code.');
-      speakWithRetry("Quiz code is required.");
+    if (!numberToVerify) {
+      alert('Please enter roll number.');
+      speak("Roll number is required.");
       return;
     }
 
     // Format validation
-    if (!/^[A-Z0-9]{4,12}$/.test(codeToJoin)) {
-      alert('Invalid code format.');
-      speakWithRetry("Invalid code format detected. Please try again.");
+    if (!/^[A-Z0-9]{6,12}$/i.test(numberToVerify)) {
+      alert('Invalid roll number format. Must be 6-12 alphanumeric characters.');
+      speak("Invalid roll number format detected. Please try again.");
       return;
     }
 
     try {
       setIsLoadingAudio(true);
 
-      const response = await fetch('http://localhost:3000/api/session/check-exists', {
+      // Simulate API call to verify roll number
+      const response = await fetch('http://localhost:3000/api/student/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ joinCode: codeToJoin }),
+        body: JSON.stringify({ rollNumber: numberToVerify }),
       });
 
       if (!response.ok) {
@@ -771,28 +790,30 @@ const QuizVision: React.FC = () => {
       }
 
       const result = await response.json();
-      console.log('Quiz existence check result:', result);
+      console.log('Roll number verification result:', result);
 
-      // ✅ ACTUAL QUIZ EXISTENCE CHECK
-      if (result?.status === 'ok' && result?.data?.exists === true) {
-        alert(`Joining quiz: ${codeToJoin}`);
-
-        // continue to quiz
-        navigate(`/enter-name?code=${codeToJoin}`);
-
+      if (result?.status === 'success') {
+        alert(`Roll number verified: ${numberToVerify}`);
+        speak(`Roll number ${numberToVerify.split('').join('-')} verified successfully.`);
+        
+        // Navigate to next page
+        // navigate(`/student/${numberToVerify}`);
+        
       } else {
-        alert('Quiz not found.');
-        speakWithRetry(
-          "No quiz was found with this code. Please try again."
+        alert('Roll number not found.');
+        speak(
+          "No student was found with this roll number. Please try again."
         );
+        setCurrentStep('listenNumber');
       }
 
     } catch (error) {
       console.error(error);
-      alert('Unable to verify quiz.');
-      speakWithRetry(
-        "Unable to verify the quiz at the moment. Please try again later."
+      alert('Unable to verify roll number.');
+      speak(
+        "Unable to verify the roll number at the moment. Please try again later."
       );
+      setCurrentStep('listenNumber');
     } finally {
       setIsLoadingAudio(false);
     }
@@ -802,12 +823,12 @@ const QuizVision: React.FC = () => {
     switch(currentStep) {
       case 'welcome':
         return isLoadingAudio ? '🎵 Welcome message playing...' : '🎵 Welcome message ready';
-      case 'listenCode':
-        return isListening ? '🎤 Listening for quiz code...' : '🎤 Ready to listen for quiz code';
+      case 'listenNumber':
+        return isListening ? '🎤 Listening for roll number...' : '🎤 Ready to listen for roll number';
       case 'confirm':
         return isConfirming ? '🤔 Listening for confirmation...' : '🤔 Confirmation requested';
-      case 'joining':
-        return '🚀 Joining quiz session...';
+      case 'verifying':
+        return '🔍 Verifying roll number...';
       default:
         return 'Ready';
     }
@@ -816,12 +837,12 @@ const QuizVision: React.FC = () => {
   const getStepIcon = (): JSX.Element => {
     switch(currentStep) {
       case 'welcome':
-        return <Volume2 size={16} className={isLoadingAudio ? "text-blue-500 animate-pulse" : "text-blue-500"} />;
-      case 'listenCode':
+        return <Volume2 size={16} className={isLoadingAudio ? "text-purple-500 animate-pulse" : "text-purple-500"} />;
+      case 'listenNumber':
         return <Mic size={16} className={isListening ? "text-red-500 animate-pulse" : "text-red-500"} />;
       case 'confirm':
         return isConfirming ? <Mic size={16} className="text-amber-500 animate-pulse" /> : <Volume2 size={16} className="text-amber-500" />;
-      case 'joining':
+      case 'verifying':
         return <CheckCircle size={16} className="text-emerald-500" />;
       default:
         return <Brain size={16} />;
@@ -829,7 +850,6 @@ const QuizVision: React.FC = () => {
   };
 
   const handleMainClick = (e: React.MouseEvent<HTMLDivElement>): void => {
-    // Handle click for tap-to-start TTS
     const target = e.target as HTMLElement;
     if (target.tagName !== 'INPUT' && 
         target.tagName !== 'BUTTON' &&
@@ -870,19 +890,19 @@ const QuizVision: React.FC = () => {
 
         {/* TTS Status Indicator */}
         {(isTTSActive || isLoadingAudio) && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-center">
+          <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center justify-center">
             <div className="flex items-center space-x-2">
               {isLoadingAudio ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  <span className="text-sm font-medium text-blue-700">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                  <span className="text-sm font-medium text-purple-700">
                     🔄 Loading audio from Coqui TTS...
                   </span>
                 </>
               ) : (
                 <>
-                  <Volume2 className="text-blue-600 animate-pulse" size={20} />
-                  <span className="text-sm font-medium text-blue-700">
+                  <Volume2 className="text-purple-600 animate-pulse" size={20} />
+                  <span className="text-sm font-medium text-purple-700">
                     🔊 Coqui TTS is active...
                   </span>
                 </>
@@ -894,15 +914,15 @@ const QuizVision: React.FC = () => {
         <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="p-8">
             <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl mb-4">
-                <Brain className="text-[#2563eb]" size={32} />
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl mb-4">
+                <User className="text-[#9333ea]" size={32} />
               </div>
               <h2 className="text-3xl font-bold text-gray-900 mb-3">
-                Join Interactive Quiz
+                Enter Your Roll Number
               </h2>
               <p className="text-gray-600 max-w-2xl mx-auto">
                 {hasStartedVoiceFlow ? 
-                  "Speak your quiz code now" : 
+                  "Speak your roll number now" : 
                   "Welcome! Listening will start after the greeting..."}
               </p>
               <div className="mt-4 flex items-center justify-center space-x-2 text-sm text-gray-500">
@@ -914,39 +934,39 @@ const QuizVision: React.FC = () => {
             {/* Step Progress */}
             <div className="max-w-xl mx-auto mb-6">
               <div className="flex items-center justify-between mb-4 px-4">
-                <div className={`flex flex-col items-center ${currentStep === 'welcome' ? 'text-[#2563eb]' : 'text-gray-400'}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'welcome' ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                <div className={`flex flex-col items-center ${currentStep === 'welcome' ? 'text-[#9333ea]' : 'text-gray-400'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'welcome' ? 'bg-purple-100' : 'bg-gray-100'}`}>
                     1
                   </div>
                   <span className="text-xs mt-1">Welcome</span>
                 </div>
                 <div className="flex-1 h-0.5 bg-gray-200 mx-2"></div>
-                <div className={`flex flex-col items-center ${currentStep === 'listenCode' ? 'text-[#2563eb]' : 'text-gray-400'}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'listenCode' ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                <div className={`flex flex-col items-center ${currentStep === 'listenNumber' ? 'text-[#9333ea]' : 'text-gray-400'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'listenNumber' ? 'bg-purple-100' : 'bg-gray-100'}`}>
                     2
                   </div>
-                  <span className="text-xs mt-1">Enter Code</span>
+                  <span className="text-xs mt-1">Enter Number</span>
                 </div>
                 <div className="flex-1 h-0.5 bg-gray-200 mx-2"></div>
-                <div className={`flex flex-col items-center ${currentStep === 'confirm' ? 'text-[#2563eb]' : 'text-gray-400'}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'confirm' ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                <div className={`flex flex-col items-center ${currentStep === 'confirm' ? 'text-[#9333ea]' : 'text-gray-400'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'confirm' ? 'bg-purple-100' : 'bg-gray-100'}`}>
                     3
                   </div>
                   <span className="text-xs mt-1">Confirm</span>
                 </div>
                 <div className="flex-1 h-0.5 bg-gray-200 mx-2"></div>
-                <div className={`flex flex-col items-center ${currentStep === 'joining' ? 'text-[#2563eb]' : 'text-gray-400'}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'joining' ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                <div className={`flex flex-col items-center ${currentStep === 'verifying' ? 'text-[#9333ea]' : 'text-gray-400'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'verifying' ? 'bg-purple-100' : 'bg-gray-100'}`}>
                     4
                   </div>
-                  <span className="text-xs mt-1">Join</span>
+                  <span className="text-xs mt-1">Verify</span>
                 </div>
               </div>
             </div>
 
             {/* Status Indicator */}
             <div className="max-w-xl mx-auto mb-6">
-              <div className="flex items-center justify-center space-x-3 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100">
+              <div className="flex items-center justify-center space-x-3 p-4 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100">
                 <div className="flex items-center space-x-2">
                   {getStepIcon()}
                   <span className="text-sm font-medium text-gray-700">
@@ -958,7 +978,7 @@ const QuizVision: React.FC = () => {
                     {[...Array(4)].map((_, i) => (
                       <div
                         key={i}
-                        className="w-1 bg-[#2563eb] rounded-full transition-all duration-100"
+                        className="w-1 bg-[#9333ea] rounded-full transition-all duration-100"
                         style={{
                           height: `${8 + audioLevel * 16 * (1 + Math.sin(Date.now() / 200 + i))}px`
                         }}
@@ -969,8 +989,8 @@ const QuizVision: React.FC = () => {
               </div>
               
               {recognizedText && !isListening && (
-                <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                  <p className="text-sm text-blue-700 flex items-center">
+                <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-100">
+                  <p className="text-sm text-purple-700 flex items-center">
                     <Mic size={12} className="mr-2" />
                     <span className="font-medium">Recognized:</span> 
                     <span className="ml-2">{recognizedText}</span>
@@ -1003,8 +1023,8 @@ const QuizVision: React.FC = () => {
             <div className="max-w-xl mx-auto mb-8 space-y-6">
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <label htmlFor="joinCode" className="block text-sm font-medium text-gray-900">
-                    Quiz Code
+                  <label htmlFor="rollNumber" className="block text-sm font-medium text-gray-900">
+                    Roll Number / Student ID
                   </label>
                   <div className="flex items-center space-x-2">
                     <span className="text-xs text-gray-500">
@@ -1013,7 +1033,7 @@ const QuizVision: React.FC = () => {
                     <div className={`w-2 h-2 rounded-full ${
                       isListening ? 'bg-red-500 animate-pulse' : 
                       hasStartedVoiceFlow ? 'bg-green-500' : 
-                      isLoadingAudio ? 'bg-blue-500 animate-pulse' : 'bg-blue-500'
+                      isLoadingAudio ? 'bg-purple-500 animate-pulse' : 'bg-purple-500'
                     }`}></div>
                   </div>
                 </div>
@@ -1024,30 +1044,36 @@ const QuizVision: React.FC = () => {
                   </div>
                   <input
                     type="text"
-                    id="joinCode"
-                    value={joinCode}
-                    onChange={handleJoinCodeChange}
-                    placeholder="Type code or use voice (e.g., QUIZ1234)"
-                    className="w-full pl-12 pr-4 py-3 text-base bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent transition-all text-gray-900 placeholder-gray-500"
-                    aria-label="Quiz join code input"
+                    id="rollNumber"
+                    value={rollNumber}
+                    onChange={handleRollNumberChange}
+                    placeholder="Type roll number or use voice (e.g., 2023001 or CS2023001)"
+                    className="w-full pl-12 pr-4 py-3 text-base bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9333ea] focus:border-transparent transition-all text-gray-900 placeholder-gray-500"
+                    aria-label="Roll number input"
                   />
-                  {joinCode && (
+                  {rollNumber && (
                     <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                       <CheckCircle className="text-emerald-600" size={20} />
                     </div>
                   )}
                 </div>
                 
+                <div className="mt-2 mb-3">
+                  <p className="text-xs text-gray-500">
+                    Examples: 2023001 (numeric) or CS2023001 (alphanumeric)
+                  </p>
+                </div>
+                
                 <div className="flex justify-between mt-3">
                   <div className="flex space-x-2">
                     <button
-                      onClick={handleVoiceInputCode}
+                      onClick={handleVoiceInputNumber}
                       disabled={!browserSupported || isLoadingAudio}
                       className={`px-4 py-2 text-sm rounded-lg transition-all flex items-center space-x-2 ${
                         !browserSupported || isLoadingAudio ? 'bg-gray-100 text-gray-400 cursor-not-allowed' :
                         isListening 
                           ? 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100' 
-                          : 'bg-blue-50 border border-blue-200 text-[#2563eb] hover:bg-blue-100'
+                          : 'bg-purple-50 border border-purple-200 text-[#9333ea] hover:bg-purple-100'
                       }`}
                       aria-label={isListening ? "Stop listening" : "Start voice input"}
                       aria-pressed={isListening}
@@ -1058,13 +1084,13 @@ const QuizVision: React.FC = () => {
                       </span>
                     </button>
                     <button
-                      onClick={handleReadCode}
-                      disabled={!joinCode || isLoadingAudio}
+                      onClick={handleReadNumber}
+                      disabled={!rollNumber || isLoadingAudio}
                       className={`px-3 py-2 text-sm rounded-lg transition-all flex items-center space-x-1 ${
-                        !joinCode || isLoadingAudio ? 'bg-gray-50 text-gray-400 cursor-not-allowed' :
-                        'bg-blue-50 border border-blue-200 text-[#2563eb] hover:bg-blue-100'
+                        !rollNumber || isLoadingAudio ? 'bg-gray-50 text-gray-400 cursor-not-allowed' :
+                        'bg-purple-50 border border-purple-200 text-[#9333ea] hover:bg-purple-100'
                       }`}
-                      aria-label="Read code aloud"
+                      aria-label="Read roll number aloud"
                     >
                       <Headphones size={14} />
                       <span>Hear</span>
@@ -1076,7 +1102,7 @@ const QuizVision: React.FC = () => {
                         isLoadingAudio ? 'bg-gray-100 text-gray-400 cursor-not-allowed' :
                         isTTSActive 
                           ? 'bg-amber-50 border border-amber-200 text-amber-600 hover:bg-amber-100' 
-                          : 'bg-blue-50 border border-blue-200 text-[#2563eb] hover:bg-blue-100'
+                          : 'bg-purple-50 border border-purple-200 text-[#9333ea] hover:bg-purple-100'
                       }`}
                       aria-label="Hear instructions"
                     >
@@ -1099,33 +1125,33 @@ const QuizVision: React.FC = () => {
             {/* Action Buttons */}
             <div className="max-w-xl mx-auto space-y-4">
               <button
-                onClick={handleJoinQuiz}
-                disabled={!joinCode || currentStep === 'joining' || isLoadingAudio}
+                onClick={handleVerifyRollNumber}
+                disabled={!rollNumber || currentStep === 'verifying' || isLoadingAudio}
                 className={`w-full py-4 rounded-xl font-semibold text-base transition-all ${
-                  joinCode && currentStep !== 'joining' && !isLoadingAudio
-                    ? 'bg-gradient-to-r from-[#2563eb] to-[#3b82f6] hover:from-[#1d4ed8] hover:to-[#2563eb] text-white shadow-sm hover:shadow transform hover:-translate-y-0.5' 
-                    : currentStep === 'joining'
+                  rollNumber && currentStep !== 'verifying' && !isLoadingAudio
+                    ? 'bg-gradient-to-r from-[#9333ea] to-[#a855f7] hover:from-[#7c3aed] hover:to-[#9333ea] text-white shadow-sm hover:shadow transform hover:-translate-y-0.5' 
+                    : currentStep === 'verifying'
                     ? 'bg-emerald-500 text-white cursor-wait'
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                 }`}
               >
-                {currentStep === 'joining' ? (
+                {currentStep === 'verifying' ? (
                   <span className="flex items-center justify-center">
                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Joining Quiz Session...
+                    Verifying Roll Number...
                   </span>
                 ) : (
-                  'Join Quiz Session'
+                  'Join Session'
                 )}
               </button>
               
               <div className="pt-4 border-t border-gray-100">
                 <p className="text-xs text-gray-500 text-center">
                   {isLoadingAudio && currentStep === 'welcome' ? (
-                    <span className="text-blue-600 font-medium">
+                    <span className="text-purple-600 font-medium">
                       🔊 Playing welcome message with Coqui TTS...
                     </span>
                   ) : isListening ? (
@@ -1135,16 +1161,16 @@ const QuizVision: React.FC = () => {
                       </span>
                     ) : (
                       <span className="text-red-600 font-medium">
-                        🎤 Speak your quiz code now...
+                        🎤 Speak your roll number now...
                       </span>
                     )
                   ) : currentStep === 'confirm' && !isConfirming ? (
-                    <span className="text-blue-600 font-medium">
+                    <span className="text-purple-600 font-medium">
                       🔊 Confirmation question asked. Listening for your response...
                     </span>
-                  ) : currentStep === 'listenCode' ? (
+                  ) : currentStep === 'listenNumber' ? (
                     hasStartedVoiceFlow ? (
-                      <span className="font-medium">🎤 Ready to listen for your code • Tap anywhere for instructions</span>
+                      <span className="font-medium">🎤 Ready to listen for your roll number • Tap anywhere for instructions</span>
                     ) : (
                       <span className="font-medium">🎤 Welcome message playing • Tap anywhere for instructions</span>
                     )
@@ -1163,4 +1189,4 @@ const QuizVision: React.FC = () => {
   );
 };
 
-export default QuizVision;
+export default RollNumberVision;
