@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, type ChangeEvent, type JSX, type MouseEvent } from 'react';
+import React, { useState, useRef, useEffect, type ChangeEvent, type JSX } from 'react';
 import { 
   Mic, 
   Headphones, 
@@ -57,6 +57,12 @@ declare global {
     webkitAudioContext: typeof AudioContext;
   }
 }
+
+// Add missing function: speakWithRetry
+const speakWithRetry = (text: string, callback?: () => void): void => {
+  console.log('Attempting to speak with retry:', text);
+  speak(text, callback);
+};
 
 // Speak utility function using Coqui TTS
 const speakWithCoqui = async (text: string, callback?: () => void): Promise<void> => {
@@ -291,23 +297,24 @@ const QuizVision: React.FC = () => {
 
     // Add click listener to main content
     const mainContent = mainContentRef.current;
+    const handleMainContentClick = (e: Event) => {
+      const target = e.target as HTMLElement;
+      // Prevent triggering on input field clicks to avoid interrupting typing
+      if (target.tagName !== 'INPUT' && 
+          target.tagName !== 'BUTTON' &&
+          !target.closest('button') &&
+          !target.closest('input')) {
+        handleTapToStartTTS();
+      }
+    };
+    
     if (mainContent) {
-      const handleMainContentClick = (e: MouseEvent) => {
-        // Prevent triggering on input field clicks to avoid interrupting typing
-        if ((e.target as HTMLElement).tagName !== 'INPUT' && 
-            (e.target as HTMLElement).tagName !== 'BUTTON' &&
-            !(e.target as HTMLElement).closest('button') &&
-            !(e.target as HTMLElement).closest('input')) {
-          handleTapToStartTTS();
-        }
-      };
-      
-      mainContent.addEventListener('click', handleMainContentClick as any);
+      mainContent.addEventListener('click', handleMainContentClick);
       
       return () => {
         clearTimeout(startTimer);
         cleanup();
-        mainContent.removeEventListener('click', handleMainContentClick as any);
+        mainContent.removeEventListener('click', handleMainContentClick);
       };
     }
 
@@ -731,42 +738,59 @@ const QuizVision: React.FC = () => {
     }
   };
 
-  const handleJoinQuiz = (): void => {
+  const handleJoinQuiz = async (): Promise<void> => {
     const codeToJoin = joinCodeRef.current || joinCode;
-    
-    if (codeToJoin) {
-      if (/^[A-Z0-9]{4,12}$/.test(codeToJoin)) {
-        alert(`Joining quiz: ${codeToJoin}`);
-      } else {
-        alert('Invalid code format. Please enter a valid alphanumeric code.');
-        isSpeakingRef.current = true;
-        setIsTTSActive(true);
-        setIsLoadingAudio(true);
-        speak("Invalid code format detected. Please try again.", () => {
-          isSpeakingRef.current = false;
-          setIsTTSActive(false);
-          setIsLoadingAudio(false);
-          setCurrentStep('listenCode');
-          setJoinCodeWithRef('');
-          setTimeout(() => {
-            startSpeechRecognition('code');
-          }, 1000);
-        });
-      }
-    } else {
+
+    if (!codeToJoin) {
       alert('Please enter quiz code.');
-      isSpeakingRef.current = true;
-      setIsTTSActive(true);
+      speakWithRetry("Quiz code is required.");
+      return;
+    }
+
+    // Format validation
+    if (!/^[A-Z0-9]{4,12}$/.test(codeToJoin)) {
+      alert('Invalid code format.');
+      speakWithRetry("Invalid code format detected. Please try again.");
+      return;
+    }
+
+    try {
       setIsLoadingAudio(true);
-      speak("Quiz code is required.", () => {
-        isSpeakingRef.current = false;
-        setIsTTSActive(false);
-        setIsLoadingAudio(false);
-        setCurrentStep('listenCode');
-        setTimeout(() => {
-          startSpeechRecognition('code');
-        }, 1000);
+
+      const response = await fetch('/api/quiz/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: codeToJoin }),
       });
+
+      if (!response.ok) {
+        throw new Error('Server error');
+      }
+
+      const result = await response.json();
+
+      // ✅ ACTUAL QUIZ EXISTENCE CHECK
+      if (result?.status === 'ok' && result?.data?.exists === true) {
+        alert(`Joining quiz: ${codeToJoin}`);
+
+        // continue to quiz
+        // navigate(`/quiz/${codeToJoin}`);
+
+      } else {
+        alert('Quiz not found.');
+        speakWithRetry(
+          "No quiz was found with this code. Please try again."
+        );
+      }
+
+    } catch (error) {
+      console.error(error);
+      alert('Unable to verify quiz.');
+      speakWithRetry(
+        "Unable to verify the quiz at the moment. Please try again later."
+      );
+    } finally {
+      setIsLoadingAudio(false);
     }
   };
 
@@ -800,6 +824,17 @@ const QuizVision: React.FC = () => {
     }
   };
 
+  const handleMainClick = (e: React.MouseEvent<HTMLDivElement>): void => {
+    // Handle click for tap-to-start TTS
+    const target = e.target as HTMLElement;
+    if (target.tagName !== 'INPUT' && 
+        target.tagName !== 'BUTTON' &&
+        !target.closest('button') &&
+        !target.closest('input')) {
+      handleTapToStartTTS();
+    }
+  };
+
   return (
     <div className="min-h-screen transition-all duration-300 bg-white">
       <Navbar />
@@ -807,15 +842,7 @@ const QuizVision: React.FC = () => {
       <main 
         ref={mainContentRef}
         className="max-w-6xl mx-auto px-6 py-8 cursor-pointer"
-        onClick={(e) => {
-          // Handle click for tap-to-start TTS
-          if ((e.target as HTMLElement).tagName !== 'INPUT' && 
-              (e.target as HTMLElement).tagName !== 'BUTTON' &&
-              !(e.target as HTMLElement).closest('button') &&
-              !(e.target as HTMLElement).closest('input')) {
-            handleTapToStartTTS();
-          }
-        }}
+        onClick={handleMainClick}
       >
         {!browserSupported && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start space-x-3">
