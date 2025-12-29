@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import type { Question } from '../../types';
 import { 
   Plus, Trash2, CheckCircle, Circle, 
-  Type, MessageSquare, ClipboardList, Star 
+  Type, MessageSquare, ClipboardList, Star,
+  ChevronRight, ChevronLeft, Check
 } from 'lucide-react';
 
 interface QuestionEditorProps {
@@ -14,6 +15,9 @@ interface QuestionEditorProps {
   onRemoveOption: (questionId: string, idx: number) => void;
   onDragOver: (e: React.DragEvent) => void;
   onDropChangeType: (e: React.DragEvent, questionId: string) => void;
+  isCurrent?: boolean; // New prop to indicate if this is the current question
+  onSubmitQuestion?: (questionId: string) => void; // New prop for submitting individual question
+  isSubmitting?: boolean; // New prop to show submission state
 }
 
 export const QuestionEditor: React.FC<QuestionEditorProps> = ({
@@ -25,6 +29,9 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
   onRemoveOption,
   onDragOver,
   onDropChangeType,
+  isCurrent = false,
+  onSubmitQuestion,
+  isSubmitting = false,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -80,20 +87,101 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
     return false;
   };
 
+  const handleSubmitQuestion = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onSubmitQuestion) {
+      onSubmitQuestion(question.id);
+    }
+  };
+
+  // Function to validate if question is ready for submission
+  const isQuestionValidForSubmission = () => {
+    // Check if question text is provided
+    if (!question.text || question.text.trim() === '') {
+      return false;
+    }
+
+    // For quiz and multi-choice questions, check options
+    if ((question.type === 'quiz' || question.type === 'multi') && question.options) {
+      // Check if all options have text
+      const hasEmptyOptions = question.options.some(option => !option || option.trim() === '');
+      if (hasEmptyOptions) {
+        return false;
+      }
+
+      // Check for correct answers
+      if (question.type === 'quiz' && question.correctAnswer === null) {
+        return false; // No correct answer selected
+      }
+
+      if (question.type === 'multi' && (!question.multiAnswers || question.multiAnswers.length === 0)) {
+        return false; // No correct answers selected
+      }
+    }
+
+    // For rating questions, check ratingMax
+    if (question.type === 'rating' && (!question.ratingMax || question.ratingMax < 2)) {
+      return false;
+    }
+
+    return true;
+  };
+
+  const validationIssues = () => {
+    const issues: string[] = [];
+    
+    if (!question.text || question.text.trim() === '') {
+      issues.push('Question text is required');
+    }
+
+    if ((question.type === 'quiz' || question.type === 'multi') && question.options) {
+      const emptyOptions = question.options.filter(option => !option || option.trim() === '');
+      if (emptyOptions.length > 0) {
+        issues.push(`${emptyOptions.length} option(s) are empty`);
+      }
+
+      if (question.type === 'quiz' && question.correctAnswer === null) {
+        issues.push('No correct answer selected');
+      }
+
+      if (question.type === 'multi' && (!question.multiAnswers || question.multiAnswers.length === 0)) {
+        issues.push('No correct answers selected');
+      }
+    }
+
+    if (question.type === 'rating' && (!question.ratingMax || question.ratingMax < 2)) {
+      issues.push('Rating scale must be at least 2');
+    }
+
+    return issues;
+  };
+
   return (
     <div 
-      className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200"
+      className={`bg-white rounded-2xl border overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 ${
+        isCurrent 
+          ? 'border-indigo-500 ring-2 ring-indigo-100' 
+          : 'border-gray-200 hover:border-gray-300'
+      }`}
       onDragOver={onDragOver}
       onDrop={(e) => onDropChangeType(e, question.id)}
     >
       {/* Question Header */}
       <div 
-        className="p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+        className={`p-6 cursor-pointer transition-colors ${
+          isCurrent ? 'bg-indigo-50' : 'hover:bg-gray-50'
+        }`}
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-semibold ${
+              isCurrent
+                ? 'bg-indigo-600 text-white'
+                : question.meta?.submitted
+                ? 'bg-green-100 text-green-700'
+                : 'bg-gray-100 text-gray-700'
+            }`}>
               {index + 1}
             </div>
             <div className="flex-1">
@@ -112,6 +200,18 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                     Required
                   </span>
                 )}
+                {question.meta?.submitted && (
+                  <span className="px-2 py-1 bg-green-50 text-green-700 text-xs font-medium rounded flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    Submitted
+                  </span>
+                )}
+                {isCurrent && (
+                  <span className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded flex items-center gap-1">
+                    <ChevronRight className="w-3 h-3" />
+                    Current
+                  </span>
+                )}
               </div>
               
               <h3 className="text-lg font-semibold text-gray-900">
@@ -123,6 +223,32 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
           </div>
           
           <div className="flex items-center gap-3">
+            {onSubmitQuestion && !question.meta?.submitted && (
+              <button
+                onClick={handleSubmitQuestion}
+                disabled={isSubmitting || !isQuestionValidForSubmission()}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                  isSubmitting
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : !isQuestionValidForSubmission()
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Submit
+                  </>
+                )}
+              </button>
+            )}
+            
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -163,6 +289,29 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
             />
           </div>
           
+          {/* Validation warnings */}
+          {!isQuestionValidForSubmission() && !question.meta?.submitted && (
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 flex-shrink-0 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center">
+                  !
+                </div>
+                <div>
+                  <h4 className="font-medium text-amber-800 mb-1">
+                    Complete the question to submit
+                  </h4>
+                  <ul className="text-sm text-amber-700 space-y-1">
+                    {validationIssues().map((issue, idx) => (
+                      <li key={idx} className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-amber-400 rounded-full" />
+                        {issue}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Question Type Specific Content */}
           {(question.type === 'quiz' || question.type === 'multi') && (
@@ -233,7 +382,11 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                         <div className="flex-1 relative">
                           <input
                             type="text"
-                            className="w-full p-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                            className={`w-full p-3 pr-10 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all ${
+                              !option || option.trim() === ''
+                                ? 'border-amber-300 bg-amber-50'
+                                : 'border-gray-300'
+                            }`}
                             value={option}
                             onChange={(e) => onUpdateOption(question.id, idx, e.target.value)}
                             placeholder={`Option ${idx + 1}`}
@@ -249,6 +402,13 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                                   Correct
                                 </span>
                               )}
+                            </div>
+                          )}
+                          {(!option || option.trim() === '') && (
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              <span className="text-amber-500 text-xs font-medium bg-amber-100 px-2 py-1 rounded">
+                                Required
+                              </span>
                             </div>
                           )}
                         </div>
@@ -268,17 +428,6 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                   ))}
                 </div>
               )}
-
-              {/* Add Option Button (when options exist) 
-              {question.options && question.options.length > 0 && question.options.length < 10 && (
-                <button
-                  onClick={() => onAddOption(question.id)}
-                  className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-400 hover:bg-indigo-50 transition-all text-gray-600 hover:text-indigo-600 flex items-center justify-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Another Option
-                </button>
-              )}*/}
 
               {/* Maximum options warning */}
               {question.options && question.options.length >= 10 && (
@@ -305,7 +454,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                   max="10"
                   value={1}
                   disabled
-                  className="w-16 p-2 border border-gray-300 rounded-lg text-center"
+                  className="w-16 p-2 border border-gray-300 rounded-lg text-center bg-gray-50"
                 />
                 <div className="text-sm text-gray-500">to</div>
                 <input
@@ -314,15 +463,28 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                   max="10"
                   value={question.ratingMax || 5}
                   onChange={(e) => onUpdate(question.id, { ratingMax: parseInt(e.target.value) || 5 })}
-                  className="w-16 p-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className={`w-16 p-2 border rounded-lg text-center focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
+                    (!question.ratingMax || question.ratingMax < 2)
+                      ? 'border-amber-300 bg-amber-50'
+                      : 'border-gray-300'
+                  }`}
                 />
                 <div className="text-sm text-gray-500">Max</div>
               </div>
+              {(!question.ratingMax || question.ratingMax < 2) && (
+                <p className="text-amber-600 text-sm">
+                  Rating scale must be at least 2
+                </p>
+              )}
               <div className="flex justify-center gap-2 mt-4">
                 {Array.from({ length: question.ratingMax || 5 }).map((_, index) => (
                   <div
                     key={index}
-                    className="w-10 h-10 rounded-full border-2 border-gray-200 flex items-center justify-center text-lg font-medium text-gray-700"
+                    className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-lg font-medium ${
+                      (!question.ratingMax || question.ratingMax < 2)
+                        ? 'border-amber-200 text-amber-400'
+                        : 'border-gray-200 text-gray-700'
+                    }`}
                   >
                     {index + 1}
                   </div>
@@ -355,6 +517,11 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-500">
                 ID: {question.id}
+                {question.meta?.submittedAt && (
+                  <span className="ml-3">
+                    Submitted: {new Date(question.meta.submittedAt).toLocaleDateString()}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-3">
                 <button
@@ -369,6 +536,23 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                 >
                   {question.meta?.draft ? 'Draft' : 'Mark as Draft'}
                 </button>
+                
+                {/* Submit button in footer for better accessibility */}
+                {onSubmitQuestion && !question.meta?.submitted && (
+                  <button
+                    onClick={handleSubmitQuestion}
+                    disabled={isSubmitting || !isQuestionValidForSubmission()}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      isSubmitting
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : !isQuestionValidForSubmission()
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-green-600 text-white hover:bg-green-700'
+                    }`}
+                  >
+                    {isSubmitting ? 'Submitting...' : 'Submit Question'}
+                  </button>
+                )}
               </div>
             </div>
           </div>

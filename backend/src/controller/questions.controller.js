@@ -1,37 +1,30 @@
-import { addQuestionsToSession, listQuestions } from '../services/questions.service.js';
+import { createQuestion, listQuestions } from '../services/questions.service.js';
 
 /**
- * Add questions to a session
- * @param {Object} req
- * @param {Object} res
- * @returns {Object} response
+ * POST /questions
  */
-export async function addQuestionsController(req, res) {
+
+export async function createQuestionController(req, res) {
   try {
     const { sessionId } = req.params;
-    const questionsData = req.body;
 
-    if (!Array.isArray(questionsData)) {
-      return res.status(400).json({
-        status: "fail",
-        message: "Request body must be an array of questions"
-      });
-    }
-
-    const inserted = await addQuestionsToSession(sessionId, questionsData);
-
-    return res.status(201).json({
-      status: "ok",
-      data: inserted
+    const question = await createQuestion({
+      ...req.body,
+      session_id: sessionId,
     });
 
-  } catch (err) {
-    return res.status(400).json({
-      status: "fail",
-      message: err.message
+    res.status(201).json({
+      success: true,
+      data: question,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 }
+
 
 /** List all questions for a session
  * @param {Object} req
@@ -56,3 +49,5 @@ export async function listQuestionsController(req, res) {
     });
   }
 }
+
+

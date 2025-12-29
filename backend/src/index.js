@@ -5,6 +5,7 @@ import {testConnection} from './db/index.js';
 import authRoutes from './routes/auth.routes.js';
 import sessionRoutes from './routes/session.routes.js';
 import cors from 'cors';
+import questionsRoutes from './routes/questions.routes.js';
 
 const app = express();
 // Port configuration
@@ -24,6 +25,7 @@ app.use(
 //Routes
 app.use('/api/auth',authRoutes);
 app.use('/api/session',sessionRoutes);
+app.use('/api/sessions/:sessionId/questions',questionsRoutes);
 
 // Simple GET endpoint
 app.get('/', (req, res) => {

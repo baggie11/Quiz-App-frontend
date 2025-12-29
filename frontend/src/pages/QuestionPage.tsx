@@ -32,9 +32,22 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
     saveError: null,
   });
   
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+  const [isSubmittingQuestion, setIsSubmittingQuestion] = useState<boolean>(false);
+  const [submitQuestionStatus, setSubmitQuestionStatus] = useState<{
+    isSuccess: boolean;
+    message: string;
+  } | null>(null);
+  
   const previewModalRef = useRef<HTMLDivElement>(null);
   const autoSaveTimerRef = useRef<number | null>(null);
   const isInitialMount = useRef(true);
+  
+  // Get current question
+  const currentQuestion = useMemo(() => 
+    questions[currentQuestionIndex], 
+    [questions, currentQuestionIndex]
+  );
   
   // Debounced questions for auto-save
   /*const debouncedQuestions = useDebounce(questions, autoSaveInterval);
@@ -255,6 +268,109 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
     }
   }, [questions]);
 
+  // Function to submit current question to backend
+  const handleSubmitQuestion = useCallback(async () => {
+    if (!currentQuestion) return;
+    
+    setIsSubmittingQuestion(true);
+    setSubmitQuestionStatus(null);
+    
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`http://localhost:3000/api/session/${sessionId}/questions/submit`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json", 
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({ 
+          question: currentQuestion,
+          questionIndex: currentQuestionIndex,
+          totalQuestions: questions.length,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Question submission failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      // Mark the question as submitted in the local state
+      setQuestions(prev => prev.map((q, idx) => 
+        idx === currentQuestionIndex 
+          ? { 
+              ...q, 
+              meta: { 
+                ...q.meta, 
+                submitted: true,
+                submittedAt: new Date().toISOString(),
+                submissionId: result.submissionId 
+              } 
+            } 
+          : q
+      ));
+      
+      // Update save state
+      setSaveState(prev => ({ ...prev, hasUnsavedChanges: true }));
+      
+      // Show success status
+      setSubmitQuestionStatus({
+        isSuccess: true,
+        message: `Question ${currentQuestionIndex + 1} submitted successfully!`
+      });
+      
+      console.log('Question submitted successfully:', result);
+      
+      // Clear status message after 3 seconds
+      setTimeout(() => setSubmitQuestionStatus(null), 3000);
+      
+    } catch (error) {
+      console.error('Question submission error:', error);
+      setSubmitQuestionStatus({
+        isSuccess: false,
+        message: error instanceof Error ? error.message : 'Failed to submit question'
+      });
+    } finally {
+      setIsSubmittingQuestion(false);
+    }
+  }, [currentQuestion, currentQuestionIndex, sessionId, questions.length]);
+
+  // Function to handle "Next Question" button click
+  const handleNextQuestion = useCallback(async () => {
+    // First submit the current question if it hasn't been submitted
+    if (currentQuestion && !currentQuestion.meta?.submitted) {
+      await handleSubmitQuestion();
+    }
+    
+    // Then move to the next question
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    } else {
+      // If this is the last question, add a new one
+      const newQuestion: Question = {
+        id: uid(),
+        text: "",
+        type: "quiz",
+        options: [defaultOption(1), defaultOption(2)],
+        ratingMax: 5,
+        correctAnswer: null,
+        multiAnswers: [],
+        meta: {},
+      };
+      setQuestions(prev => [...prev, newQuestion]);
+      setCurrentQuestionIndex(questions.length);
+    }
+  }, [currentQuestion, currentQuestionIndex, questions.length, handleSubmitQuestion]);
+
+  // Function to go to previous question
+  const handlePrevQuestion = useCallback(() => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
+    }
+  }, [currentQuestionIndex]);
+
   // Question CRUD operations (updated to mark unsaved changes)
   const addQuestion = useCallback((type: QType) => {
     const q: Question = {
@@ -422,147 +538,223 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
     [questions]
   );
 
+  // Calculate submitted questions count
+  const submittedQuestionsCount = useMemo(() => 
+    questions.filter(q => q.meta?.submitted).length, 
+    [questions]
+  );
+
   return (
-  <div className="min-h-screen bg-gray-50">
-    {/* ===== Top Header (ONLY branding + save status) ===== */}
-    <div className="sticky top-0 z-40 bg-white border-b">
-      <div className="max-w-7xl mx-auto px-6 py-3">
-        <QuestionHeader
-          onPreview={handlePreview}
-          onSaveAll={handleSaveAll}
-          saving={saveState.isSaving}
-          questionsCount={questions.length}
-          unsavedCount={unsavedQuestionsCount}
-          lastSaved={saveState.lastSaved}
-          autoSaveEnabled={saveState.autoSaveEnabled}
-          onToggleAutoSave={toggleAutoSave}
-          hasUnsavedChanges={saveState.hasUnsavedChanges}
-          saveError={saveState.saveError}
-          sessionId={sessionId}
-        />
+    <div className="min-h-screen bg-gray-50">
+      {/* ===== Top Header (ONLY branding + save status) ===== */}
+      <div className="sticky top-0 z-40 bg-white border-b">
+        <div className="max-w-7xl mx-auto px-6 py-3">
+          <QuestionHeader
+            onPreview={handlePreview}
+            onSaveAll={handleSaveAll}
+            saving={saveState.isSaving}
+            questionsCount={questions.length}
+            unsavedCount={unsavedQuestionsCount}
+            lastSaved={saveState.lastSaved}
+            autoSaveEnabled={saveState.autoSaveEnabled}
+            onToggleAutoSave={toggleAutoSave}
+            hasUnsavedChanges={saveState.hasUnsavedChanges}
+            saveError={saveState.saveError}
+            sessionId={sessionId}
+          />
+        </div>
       </div>
-    </div>
 
-    {/* ===== CONTROL CARD (Stats + Preview + Filters) ===== */}
-    <div className="max-w-7xl mx-auto px-6 mt-4">
-      <div className="bg-white rounded-2xl shadow-sm p-4 space-y-2">
-        
-        {/* Top Row: Stats + Actions */}
-        <div className="flex flex-wrap items-center gap-5">
-          <div className="flex items-center gap-5">
-            {/*<div className="px-3 py-1.5 bg-gray-100 rounded-lg text-sm font-medium">
-              {questions.length} Questions
-            </div>*/}
+      {/* ===== CONTROL CARD (Stats + Preview + Filters) ===== */}
+      <div className="max-w-7xl mx-auto px-6 mt-4">
+        <div className="bg-white rounded-2xl shadow-sm p-4 space-y-2">
+          
+          {/* Top Row: Stats + Actions */}
+          <div className="flex flex-wrap items-center gap-5">
+            <div className="flex items-center gap-5">
+              {/*<div className="px-3 py-1.5 bg-gray-100 rounded-lg text-sm font-medium">
+                {questions.length} Questions
+              </div>*/}
 
-            {unsavedQuestionsCount > 0 && (
-              <div className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium">
-                {unsavedQuestionsCount} Drafts
-              </div>
-            )}
+              {unsavedQuestionsCount > 0 && (
+                <div className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium">
+                  {unsavedQuestionsCount} Drafts
+                </div>
+              )}
+              
+              {submittedQuestionsCount > 0 && (
+                <div className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium">
+                  {submittedQuestionsCount} Submitted
+                </div>
+              )}
+            </div>
+
+            {/*<div className="flex items-center gap-2">
+              <button
+                onClick={handlePreview}
+                className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm font-medium"
+              >
+                Preview
+              </button>
+
+              <button
+                onClick={handleSaveAll}
+                disabled={!saveState.hasUnsavedChanges || saveState.isSaving}
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  saveState.hasUnsavedChanges
+                    ? "bg-green-600 text-white hover:bg-green-700"
+                    : "bg-green-100 text-green-700 cursor-not-allowed"
+                }`}
+              >
+                {saveState.isSaving ? "Saving..." : "Save"}
+              </button>
+            </div> */}
           </div>
 
-          {/*<div className="flex items-center gap-2">
-            <button
-              onClick={handlePreview}
-              className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm font-medium"
-            >
-              Preview
-            </button>
-
-            <button
-              onClick={handleSaveAll}
-              disabled={!saveState.hasUnsavedChanges || saveState.isSaving}
-              className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                saveState.hasUnsavedChanges
-                  ? "bg-green-600 text-white hover:bg-green-700"
-                  : "bg-green-100 text-green-700 cursor-not-allowed"
-              }`}
-            >
-              {saveState.isSaving ? "Saving..." : "Save"}
-            </button>
-          </div> */}
-        </div>
-
-        {/* Filter Tabs */}
-        <div className="flex gap-2">
-          {["all", "quiz", "multi", "rating", "open", "drafts"].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f as any)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                filter === f
-                  ? "bg-indigo-600 text-white"
-                  : "bg-gray-100 hover:bg-gray-200"
-              }`}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
+          {/* Filter Tabs */}
+          <div className="flex gap-2">
+            {["all", "quiz", "multi", "rating", "open", "drafts"].map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f as any)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                  filter === f
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 hover:bg-gray-200"
+                }`}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
 
-    {/* ===== MAIN BUILDER AREA ===== */}
-    <div className="max-w-7xl mx-auto px-6 mt-6">
-      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
-        
-        {/* Palette */}
-        <aside className="sticky top-32 self-start">
-          <QuestionPalette
-            isOpen={paletteOpen}
-            onToggle={() => setPaletteOpen(!paletteOpen)}
-            onDragStart={onPaletteDragStart}
-            onAddQuestion={addQuestion}
-          />
-        </aside>
-
-        {/* Question Canvas */}
-        <main className="flex-1 overflow-y-auto p-4 space-y-5">
-          {filteredQuestions.length === 0 ? (
-            <div className="bg-white border border-dashed rounded-2xl p-10 text-center">
-              <h3 className="text-lg font-semibold">No questions</h3>
-              <p className="text-gray-500 mt-2">
-                Add a question from the palette
-              </p>
+      {/* ===== QUESTION NAVIGATION BAR ===== */}
+      {questions.length > 0 && filter === "all" && (
+        <div className="max-w-7xl mx-auto px-6 mt-4">
+          <div className="bg-white rounded-2xl shadow-sm p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={handlePrevQuestion}
+                  disabled={currentQuestionIndex === 0}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    currentQuestionIndex === 0
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-gray-100 hover:bg-gray-200"
+                  }`}
+                >
+                  ← Previous
+                </button>
+                
+                <div className="text-sm font-medium">
+                  Question {currentQuestionIndex + 1} of {questions.length}
+                  {currentQuestion?.meta?.submitted && (
+                    <span className="ml-2 px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
+                      ✓ Submitted
+                    </span>
+                  )}
+                </div>
+                
+                <button
+                  onClick={handleNextQuestion}
+                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+                >
+                  {currentQuestionIndex < questions.length - 1 ? "Next Question →" : "Add New Question →"}
+                </button>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSubmitQuestion}
+                  disabled={!currentQuestion || currentQuestion.meta?.submitted || isSubmittingQuestion}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    currentQuestion?.meta?.submitted || !currentQuestion
+                      ? "bg-green-100 text-green-700 cursor-not-allowed"
+                      : "bg-green-600 text-white hover:bg-green-700"
+                  }`}
+                >
+                  {isSubmittingQuestion ? "Submitting..." : 
+                   currentQuestion?.meta?.submitted ? "✓ Submitted" : "Submit This Question"}
+                </button>
+                
+                {/* Submit status message */}
+                {submitQuestionStatus && (
+                  <div className={`px-3 py-2 rounded-lg text-sm ${
+                    submitQuestionStatus.isSuccess 
+                      ? "bg-green-50 text-green-700" 
+                      : "bg-red-50 text-red-700"
+                  }`}>
+                    {submitQuestionStatus.message}
+                  </div>
+                )}
+              </div>
             </div>
-          ) : (
-            filteredQuestions.map((q, idx) => (
-              <QuestionEditor
-                key={q.id}
-                question={q}
-                index={idx}
-                onUpdate={updateQuestion}
-                onAddOption={addOption}
-                onUpdateOption={updateOption}
-                onRemoveOption={()=>removeOption}
-                onDragOver={onDragOver}
-                onDropChangeType={onDropChangeType}
-              />
-            ))
-          )}
+          </div>
+        </div>
+      )}
 
-          {/* Desktop Add */}
-          {filter==="all"&&(
-          <button
-            onClick={() => addQuestion("quiz")}
-            className="hidden lg:block w-full py-6 border-2 border-dashed rounded-2xl hover:bg-gray-50"
-          >
-            + Add Question
-          </button>)}
-        </main>
+      {/* ===== MAIN BUILDER AREA ===== */}
+      <div className="max-w-7xl mx-auto px-6 mt-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
+          
+          {/* Palette */}
+          <aside className="sticky top-32 self-start">
+            <QuestionPalette
+              isOpen={paletteOpen}
+              onToggle={() => setPaletteOpen(!paletteOpen)}
+              onDragStart={onPaletteDragStart}
+              onAddQuestion={addQuestion}
+            />
+          </aside>
+
+          {/* Question Canvas */}
+          <main className="flex-1 overflow-y-auto p-4 space-y-5">
+            {filteredQuestions.length === 0 ? (
+              <div className="bg-white border border-dashed rounded-2xl p-10 text-center">
+                <h3 className="text-lg font-semibold">No questions</h3>
+                <p className="text-gray-500 mt-2">
+                  Add a question from the palette
+                </p>
+              </div>
+            ) : (
+              filteredQuestions.map((q, idx) => (
+                <QuestionEditor
+                  key={q.id}
+                  question={q}
+                  index={idx}
+                  onUpdate={updateQuestion}
+                  onAddOption={addOption}
+                  onUpdateOption={updateOption}
+                  onRemoveOption={()=>removeOption}
+                  onDragOver={onDragOver}
+                  onDropChangeType={onDropChangeType}
+                  isCurrent={filter === "all" && idx === currentQuestionIndex}
+                />
+              ))
+            )}
+
+            {/* Desktop Add */}
+            {filter==="all"&&(
+            <button
+              onClick={() => addQuestion("quiz")}
+              className="hidden lg:block w-full py-6 border-2 border-dashed rounded-2xl hover:bg-gray-50"
+            >
+              + Add Question
+            </button>)}
+          </main>
+        </div>
       </div>
+
+      {/* Preview */}
+      <QuestionPreview
+        isOpen={previewOpen}
+        questions={questions}
+        onClose={() => setPreviewOpen(false)}
+      />
     </div>
-
-    {/* Preview */}
-    <QuestionPreview
-      isOpen={previewOpen}
-      questions={questions}
-      onClose={() => setPreviewOpen(false)}
-    />
-  </div>
-);
-
-
+  );
 };
 
 export default QuestionBuilderPage;

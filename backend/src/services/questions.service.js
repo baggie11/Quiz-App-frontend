@@ -1,31 +1,44 @@
-import { createQuestions, getQuestionsBySession} from '../db/questions.repo.js';
+import { insertQuestion,insertQuestionOptions, getQuestionsBySession} from '../db/questions.repo.js';
 
 /**
- * Add multiple questions to a session
- * questionsData = array of questions
- */
-export async function addQuestionsToSession(sessionId, questionsData) {
-  if (!Array.isArray(questionsData) || questionsData.length === 0) {
-    throw new Error("questionsData must be a non-empty array");
+ * create a question with options
+**/
+export async function createQuestion(payload) {
+  const {
+    session_id,
+    question_text,
+    question_type,
+    order_index,
+    image_url,
+    explanation,
+    options,
+  } = payload;
+
+  const question = await insertQuestion({
+    session_id,
+    question_text,
+    question_type,
+    order_index,
+    image_url,
+    explanation,
+  });
+
+  if (options?.length) {
+    const optionsPayload = options.map((opt) => ({
+      question_id: question.id,
+      option_text: opt.option_text,
+      is_correct: opt.is_correct ?? false,
+    }));
+
+    await insertQuestionOptions(optionsPayload);
   }
 
-  // Basic validation for each question
-  for (const q of questionsData) {
-    if (!q.question_text) {
-      throw new Error("Each question must have question_text");
-    }
-    if (!q.options || !Array.isArray(q.options)) {
-      throw new Error("Each question must have 'options' as an array");
-    }
-    if (!q.correct_answers || !Array.isArray(q.correct_answers)) {
-      throw new Error("Each question must have 'correct_answers' as an array");
-    }
-  }
-
-  // Insert all questions using the batch insert repo function
-  const inserted = await createQuestions(sessionId, questionsData);
-  return inserted;
+  return question;
 }
+
+
+
+
 
 /**
  * Get all questions in a session

@@ -16,34 +16,6 @@ export async function getQuestionById(questionId) {
   return data;
 }
 
-/** Create multiple questions for a session
- * @param {string} sessionId
- * @param {Array<Object>} questionsData
- * @returns {Promise<Array<Object>>} created questions
- */
-export async function createQuestions(sessionId, questionsData) {
-  const payload = questionsData.map((q, index) => ({
-    session_id: sessionId,
-    question_text: q.question_text,
-    question_type: q.question_type,
-    options: q.options,
-    correct_answers: q.correct_answers,
-    order_index: q.order_index ?? index,
-    points: q.points ?? 1000,
-    time_limit: q.time_limit ?? 30,
-    image_url: q.image_url ?? null,
-    explanation: q.explanation ?? null
-  }));
-
-  const { data, error } = await supabase
-    .from('questions')
-    .insert(payload)
-    .select();
-
-  if (error) throw new Error(error.message);
-  return data;
-}
-
 /** List all questions for a session
  * @param {string} sessionId
  * @returns {Promise<Array<Object>>} list of questions
@@ -57,4 +29,29 @@ export async function getQuestionsBySession(sessionId) {
 
   if (error) throw new Error(error.message);
   return data;
+}
+
+/**
+ * Save a question - insertion
+ * @param {Object} questionData
+ * @returns {Promise<Object>} inserted question object
+ */
+
+export async function insertQuestion(question) {
+  const { data, error } = await supabase
+    .from('questions')
+    .insert([question])
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function insertQuestionOptions(options) {
+  const { error } = await supabase
+    .from('question_options')
+    .insert(options);
+
+  if (error) throw new Error(error.message);
 }
