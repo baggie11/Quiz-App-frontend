@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import HostAuthPage from "./pages/AuthPage";
 import DashboardPage from "./pages/Dashboard";
-import QuestionBuilderWrapper from "./pages/QuestionBuilderPageWrapper";
+import QuestionBuilderPage from "./pages/QuestionBuilderPageWrapper";
 import QuizVisionHome from "./pages/Role";
 import SimpleTTS from "./pages/Simpletts";
 import QuizVision from "./pages/LandingPage";
@@ -16,7 +16,11 @@ function App() {
         <Route path = "/join-session" element = {<QuizVision/>}/>
         <Route path = "/auth" element = {<HostAuthPage/>}/>
         <Route path = "/dashboard" element = {<DashboardPage/>}/>
-        <Route path="/session/:sessionId/questions" element={<QuestionBuilderWrapper />} />
+        <Route path="/session/:sessionId/questions" element={<QuestionBuilderPage 
+      sessionId="" // Pass empty string or dummy value
+      onSave={(questions) => console.log('Save:', questions)}
+      onPreview={(questions) => console.log('Preview:', questions)}
+    />} />
         <Route path = "/simpletts" element = {<SimpleTTS/>}/>
         <Route path = "/enter-name" element = {<RollNumberVision/>}/>
         {/* Add more routes below when you create new pages */}

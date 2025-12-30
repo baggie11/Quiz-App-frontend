@@ -12,10 +12,7 @@ import {
 } from 'lucide-react';
 
 interface QuestionHeaderProps {
-  onPreview: () => void;
-  onSaveAll: () => void;
-  onExport?: () => void;
-  onImport?: () => void;
+  onPreview: () => void;  // Now called without parameters
   saving: boolean;
   questionsCount?: number;
   unsavedCount?: number;
@@ -25,19 +22,17 @@ interface QuestionHeaderProps {
   onToggleAutoSave?: () => void;
   saveError?: string | null;
   hasUnsavedChanges?: boolean;
+  // Removed: onSaveAll, onExport, onImport
 }
 
 export const QuestionHeader: React.FC<QuestionHeaderProps> = ({
   onPreview,
-  onSaveAll,
-  onExport,
-  onImport,
   saving,
   questionsCount = 0,
   unsavedCount = 0,
   sessionId,
   lastSaved,
-  autoSaveEnabled = true,
+  autoSaveEnabled = false,  // Changed from true to false
   onToggleAutoSave,
   saveError = null,
   hasUnsavedChanges = false,
@@ -72,14 +67,14 @@ export const QuestionHeader: React.FC<QuestionHeaderProps> = ({
     if (saveError) return <AlertCircle className="w-3.5 h-3.5 text-red-500" />;
     if (saving) return <Clock className="w-3.5 h-3.5 text-blue-500 animate-pulse" />;
     if (hasUnsavedChanges) return <Clock className="w-3.5 h-3.5 text-amber-500" />;
-    {/*return <CheckCircle className="w-3.5 h-3.5 text-green-500" />;*/}
+    return <CheckCircle className="w-3.5 h-3.5 text-green-500" />;  // Uncommented this line
   };
 
   const getSaveStatusText = () => {
     if (saveError) return 'Save error';
     if (saving) return 'Saving...';
     if (hasUnsavedChanges) return 'Unsaved changes';
-    
+    return 'All saved';  // Added this return
   };
 
   return (
@@ -233,8 +228,6 @@ export const QuestionHeader: React.FC<QuestionHeaderProps> = ({
             </button>
           )}
           
-         
-          
           {/* Preview Button */}
           <button
             onClick={onPreview}
@@ -244,40 +237,8 @@ export const QuestionHeader: React.FC<QuestionHeaderProps> = ({
             <span className="hidden sm:inline">Preview</span>
           </button>
           
-          {/* Save All Button */}
-          <button
-            onClick={onSaveAll}
-            disabled={saving || (!hasUnsavedChanges && !saveError)}
-            className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-colors flex items-center gap-1.5 ${
-              saving 
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                : hasUnsavedChanges || saveError
-                  ? 'bg-green-600 hover:bg-green-700 text-white'
-                  : 'bg-green-100 text-green-700 cursor-not-allowed'
-            }`}
-          >
-            {saving ? (
-              <>
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span className="hidden sm:inline">Saving...</span>
-              </>
-            ) : saveError ? (
-              <>
-                <AlertCircle className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Retry Save</span>
-              </>
-            ) : hasUnsavedChanges ? (
-              <>
-                <Save className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Save All</span>
-              </>
-            ) : (
-              <>
-                <CheckCircle className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">All Saved</span>
-              </>
-            )}
-          </button>
+          {/* REMOVED: Save All Button - since we're using per-question saving now */}
+          {/* The QuestionBuilderPage handles saving via Next Question button */}
         </div>
       </div>
       

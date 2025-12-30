@@ -14,6 +14,8 @@ export async function createQuestion(payload) {
     options,
   } = payload;
 
+
+  
   const question = await insertQuestion({
     session_id,
     question_text,
@@ -29,6 +31,8 @@ export async function createQuestion(payload) {
       option_text: opt.option_text,
       is_correct: opt.is_correct ?? false,
     }));
+  
+    console.log("Options"+options);
 
     await insertQuestionOptions(optionsPayload);
   }

@@ -147,6 +147,9 @@ const CreateSessionForm: React.FC<CreateSessionFormProps> = ({
         if (addSession) {
           addSession(newSession);
         }
+
+        //save session id in local storage
+        localStorage.setItem('currentSessionId', data.data?.id);
         
         // Redirect to question builder with session ID in URL
         if (redirectToBuilder && data.data?.id) {

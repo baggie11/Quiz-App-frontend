@@ -7,7 +7,6 @@ import { createQuestion, listQuestions } from '../services/questions.service.js'
 export async function createQuestionController(req, res) {
   try {
     const { sessionId } = req.params;
-
     const question = await createQuestion({
       ...req.body,
       session_id: sessionId,

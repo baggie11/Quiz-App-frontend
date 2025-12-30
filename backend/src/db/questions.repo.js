@@ -44,14 +44,19 @@ export async function insertQuestion(question) {
     .select()
     .single();
 
+  
+
   if (error) throw new Error(error.message);
   return data;
 }
 
 export async function insertQuestionOptions(options) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('question_options')
-    .insert(options);
+    .insert(options)
+    .select();
+  
+  
 
   if (error) throw new Error(error.message);
 }

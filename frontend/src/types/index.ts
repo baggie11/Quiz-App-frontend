@@ -35,7 +35,8 @@ export interface Question {
   type: QType;
   options?: string[];
   ratingMax?: number;
-  correctAnswer?: number | string | null;
+  correctAnswer?: number| null;
+  modelAnswer?: string;
   multiAnswers?: number[];
   meta?: { required?: boolean; draft?: boolean; [k: string]: any };
 }
