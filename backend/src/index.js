@@ -20,7 +20,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://quiz-app-ojnx.vercel.app/" // your actual domain
+      "https://quiz-app-tzvw.vercel.app" // your actual domain
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
