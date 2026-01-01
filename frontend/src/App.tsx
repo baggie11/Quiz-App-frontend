@@ -3,7 +3,6 @@ import HostAuthPage from "./pages/AuthPage";
 import DashboardPage from "./pages/Dashboard";
 import QuestionBuilderPage from "./pages/QuestionBuilderPageWrapper";
 import QuizVisionHome from "./pages/Role";
-import SimpleTTS from "./pages/Simpletts";
 import QuizVision from "./pages/LandingPage";
 import RollNumberVision from "./pages/NamePage";
 import QuizPlayPage from "./pages/SessionPage";
