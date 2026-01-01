@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.routes.js';
 import sessionRoutes from './routes/session.routes.js';
 import cors from 'cors';
 import questionsRoutes from './routes/questions.routes.js';
+import participantRoutes from './routes/participant.routes.js';
 
 const app = express();
 // Port configuration
@@ -26,6 +27,7 @@ app.use(
 app.use('/api/auth',authRoutes);
 app.use('/api/session',sessionRoutes);
 app.use('/api/sessions/:sessionId/questions',questionsRoutes);
+app.use('/api/participants',participantRoutes);
 
 // Simple GET endpoint
 app.get('/', (req, res) => {
