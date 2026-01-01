@@ -18,9 +18,13 @@ app.use(express.json());
 
 app.use(
   cors({
-    origin: "*",      // allow all origins (remove * in production)
+    origin: [
+      "http://localhost:5173",
+      "https://quiz-app-ojnx.vercel.app/" // your actual domain
+    ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true
   })
 );
 
