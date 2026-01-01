@@ -1,0 +1,25 @@
+# Core web framework
+Flask
+flask-cors
+
+
+
+# Numerical stack (CRITICAL: must match binaries)
+numpy
+pandas
+scipy
+
+# PyTorch (CPU version – safest on Windows)
+torch
+torchaudio
+
+# Coqui TTS
+TTS
+
+# Audio handling
+soundfile
+librosa
+
+# Optional but recommended
+tqdm
+
