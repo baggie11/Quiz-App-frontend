@@ -1,5 +1,5 @@
 import { supabase } from './index.js';
-
+import { getSessionByJoinCode } from './sessions.repo.js';
 /**
  * Get a question by its ID
  * @param {string} questionId
@@ -20,16 +20,40 @@ export async function getQuestionById(questionId) {
  * @param {string} sessionId
  * @returns {Promise<Array<Object>>} list of questions
  */
-export async function getQuestionsBySession(sessionId) {
-  const { data, error } = await supabase
-    .from('questions')
-    .select('*')
-    .eq('session_id', sessionId)
-    .order('order_index', { ascending: true });
 
-  if (error) throw new Error(error.message);
+
+export async function getQuestionsBySession(joinCode) {
+  // 1️⃣ Resolve session
+  const session = await getSessionByJoinCode(joinCode);
+
+  if (!session) {
+    throw new Error("Invalid or expired join code");
+  }
+
+  // 2️⃣ Fetch questions + options
+  const { data, error } = await supabase
+    .from("questions")
+    .select(`
+      id,
+      question_text,
+      order_index,
+      question_options (
+        id,
+        option_text,
+        is_correct
+      )
+    `)
+    .eq("session_id", session.id)
+    .order("order_index", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
   return data;
 }
+
+
 
 /**
  * Save a question - insertion

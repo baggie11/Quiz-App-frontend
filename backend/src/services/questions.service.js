@@ -47,6 +47,7 @@ export async function createQuestion(payload) {
 /**
  * Get all questions in a session
  */
-export async function listQuestions(sessionId) {
-  return await getQuestionsBySession(sessionId);
+export async function listQuestions(sessionCode) {
+
+  return await getQuestionsBySession(sessionCode);
 }

@@ -7,6 +7,7 @@ import sessionRoutes from './routes/session.routes.js';
 import cors from 'cors';
 import questionsRoutes from './routes/questions.routes.js';
 import participantRoutes from './routes/participant.routes.js';
+import questionRoutes from './routes/questions.routes.js';
 
 const app = express();
 // Port configuration

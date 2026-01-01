@@ -1644,6 +1644,7 @@ import {
   User,
   Hash
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Navbar Component
 const Navbar: React.FC = () => {
@@ -1759,6 +1760,8 @@ const RollNumberVision: React.FC = () => {
 
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const navigate = useNavigate();
+
   // Extract session code from URL parameters on component mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1786,65 +1789,67 @@ const RollNumberVision: React.FC = () => {
   };
 
   const handleJoinSession = async (): Promise<void> => {
-    const numberToJoin = rollNumber.trim();
+  const numberToJoin = rollNumber.trim();
 
-    if (!numberToJoin) {
-      alert("Please enter your roll number before joining.");
-      return;
+  if (!numberToJoin) {
+    alert("Please enter your roll number before joining.");
+    return;
+  }
+
+  if (!sessionCode) {
+    alert("Session code not found. Please use a valid session link.");
+    return;
+  }
+
+  try {
+    setCurrentStep('joining');
+    setIsLoading(true);
+
+    const response = await fetch('http://localhost:3000/api/participants/join-session', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        roll_number: numberToJoin,
+        session_code: sessionCode,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Server error: ${response.status}`);
     }
 
-    if (!sessionCode) {
-      alert("Session code not found. Please use a valid session link.");
-      return;
-    }
+    const result = await response.json();
+    console.log('Participant joined successfully:', result);
 
-    try {
-      setCurrentStep('joining');
-      setIsLoading(true);
+    // ✅ IMPORTANT: Store participant ID and session ID for the quiz page
+    const participantId = result.participantId || result.id;
+    const sessionId = result.sessionId || sessionCode;
 
-      const response = await fetch('http://localhost:3000/api/participants/join-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          roll_number: numberToJoin,
-          session_code: sessionCode,
-        }),
-      });
+    // Store in localStorage for persistence
+    localStorage.setItem('quizParticipantId', participantId);
+    localStorage.setItem('quizSessionId', sessionId);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Server error: ${response.status}`);
+    // ✅ Navigate to the quiz play page
+    navigate(`/session/${sessionId}`, {
+      state: {
+        participantId: participantId,
+        sessionCode: sessionCode,
+        rollNumber: numberToJoin
       }
+    });
 
-      const result = await response.json();
-      console.log('Participant joined successfully:', result);
-
-      alert(`Joined Session ${sessionCode}!\nRoll Number: ${numberToJoin}`);
-
-      // Reset form for next participant
-      setRollNumber('');
-      setCurrentStep('input');
-
-      setTimeout(() => {
-        if (inputRef.current) {
-          inputRef.current.focus();
-        }
-      }, 1000);
-
-    } catch (error: any) {
-      console.error('Failed to join session:', error);
-      alert(`Failed to join session ${sessionCode}. ${error.message || 'Please try again.'}`);
-
-      setCurrentStep('input');
-
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  } catch (error: any) {
+    console.error('Failed to join session:', error);
+    alert(`Failed to join session ${sessionCode}. ${error.message || 'Please try again.'}`);
+    setCurrentStep('input');
+  } finally {
+    setIsLoading(false);
+  }
+};
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
       handleJoinSession();
