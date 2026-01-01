@@ -1645,6 +1645,7 @@ import {
   Hash
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { API } from '../api/config';
 
 // Navbar Component
 const Navbar: React.FC = () => {
@@ -1805,7 +1806,7 @@ const RollNumberVision: React.FC = () => {
     setCurrentStep('joining');
     setIsLoading(true);
 
-    const response = await fetch('http://localhost:3000/api/participants/join-session', {
+    const response = await fetch(`${API.node}/api/participants/join-session`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

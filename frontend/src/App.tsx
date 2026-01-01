@@ -6,6 +6,7 @@ import QuizVisionHome from "./pages/Role";
 import SimpleTTS from "./pages/Simpletts";
 import QuizVision from "./pages/LandingPage";
 import RollNumberVision from "./pages/NamePage";
+import QuizPlayPage from "./pages/SessionPage";
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         {/* Add more routes below when you create new pages */}
         {/* <Route path="/dashboard" element={<Dashboard />} /> */}
         {/* <Route path="/login" element={<Login />} /> */}
+        <Route path = "/session/:sessionId" element = {<QuizPlayPage/>}/>
       </Routes>
     </Router>
   );

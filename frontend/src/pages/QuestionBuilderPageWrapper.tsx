@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import { useNavigate } from 'react-router-dom'; // Add this import
 import { ArrowLeft, AlertCircle } from 'lucide-react'; // Add ArrowLeft import
+import { API } from '../api/config';
 
 import type {
   Question,
@@ -61,157 +62,161 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
   }, [navigate]);
 
   // Load existing questions from the database
-  const loadExistingQuestions = useCallback(async () => {
-    if (!sessionId) {
+  // Replace the loadExistingQuestions function in your code with this version:
+
+// Load existing questions from the database
+const loadExistingQuestions = useCallback(async () => {
+  if (!sessionId) {
+    setLoading(false);
+    return;
+  }
+
+  setLoading(true);
+  setLoadError(null);
+
+  try {
+    const token = localStorage.getItem("token");
+    
+    const response = await fetch(
+      `${API.node}/api/sessions/${sessionId}/questions`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(errText || "Failed to load questions");
+    }
+
+    const result = await response.json();
+    console.log("Loaded questions from server:", result);
+
+    // Extract questions from the response format
+    // Response format: {"status":"ok","data":[...]}
+    const questionsData = result.data || [];
+    
+    if (!Array.isArray(questionsData)) {
+      console.warn("Expected questions data to be an array, got:", questionsData);
+      setQuestions([]);
       setLoading(false);
       return;
     }
 
-    setLoading(true);
-    setLoadError(null);
+    // Transform API data to local Question format
+    const loadedQuestions: Question[] = questionsData.map((item: any, index: number) => {
+      // Map API question_type to local QType
+      const typeMap: Record<string, QType> = {
+        MCQ: "quiz",           // Multiple Choice Question
+        "multiple_choice": "quiz",
+        MSQ: "multi",          // Multiple Select Question  
+        "multiple_select": "multi",
+        RATING: "rating",
+        "rating": "rating",
+        OPEN_ENDED: "open",
+        "open_ended": "open",
+      };
 
-    try {
-      const token = localStorage.getItem("token");
+      // Default to quiz if type not recognized
+      const questionType = typeMap[item.question_type] || "quiz";
       
-      const response = await fetch(
-        `http://localhost:3000/api/sessions/${sessionId}/questions`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      let options: string[] | undefined;
+      let correctAnswer: number | undefined;
+      let multiAnswers: number[] | undefined;
+      let ratingMax: number | undefined;
 
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(errText || "Failed to load questions");
-      }
-
-      const result = await response.json();
-      console.log("Loaded questions from server:", result);
-
-      // Extract questions from the response format
-      // Response format: {"status":"ok","data":[...]}
-      const questionsData = result.data || [];
-      
-      if (!Array.isArray(questionsData)) {
-        console.warn("Expected questions data to be an array, got:", questionsData);
-        setQuestions([]);
-        setLoading(false);
-        return;
-      }
-
-      // Transform API data to local Question format
-      const loadedQuestions: Question[] = questionsData.map((item: any) => {
-        // Map API question_type to local QType
-        const typeMap: Record<string, QType> = {
-          MCQ: "quiz",           // Multiple Choice Question
-          "multiple_choice": "quiz",
-          MSQ: "multi",          // Multiple Select Question  
-          "multiple_select": "multi",
-          RATING: "rating",
-          "rating": "rating",
-          OPEN_ENDED: "open",
-          "open_ended": "open",
-        };
-
-        // Default to quiz if type not recognized
-        const questionType = typeMap[item.question_type] || "quiz";
+      // Handle the actual API format: question_options array
+      if (item.question_options && Array.isArray(item.question_options)) {
+        options = item.question_options.map((opt: any) => 
+          opt.option_text || opt.text || opt.option_text || ""
+        );
         
-        let options: string[] | undefined;
-        let correctAnswer: number | undefined;
-        let multiAnswers: number[] | undefined;
-        let ratingMax: number | undefined;
-
-        // If options exist in the response, process them
-        if (item.options && Array.isArray(item.options)) {
-          options = item.options.map((opt: any) => 
-            opt.option_text || opt.text || opt.option_text || ""
-          );
-          
-          if (questionType === "quiz") {
-            const correctIndex = item.options.findIndex((opt: any) => opt.is_correct);
-            if (correctIndex !== -1) {
-              correctAnswer = correctIndex;
-            }
-          } else if (questionType === "multi") {
-            multiAnswers = item.options
-              .map((opt: any, idx: number) => (opt.is_correct ? idx : -1))
-              .filter((idx: number) => idx !== -1);
+        if (questionType === "quiz") {
+          // Find the first correct option index for single choice
+          const correctIndex = item.question_options.findIndex((opt: any) => opt.is_correct);
+          if (correctIndex !== -1) {
+            correctAnswer = correctIndex;
           }
-        } else {
-          // If no options in response, set defaults based on question type
-          if (questionType === "quiz" || questionType === "multi") {
-            options = ["Option 1", "Option 2"];
-            if (questionType === "quiz") {
-              correctAnswer = 0;
-            } else {
-              multiAnswers = [0];
-            }
-          }
+        } else if (questionType === "multi") {
+          // Find all correct option indices for multiple choice
+          multiAnswers = item.question_options
+            .map((opt: any, idx: number) => (opt.is_correct ? idx : -1))
+            .filter((idx: number) => idx !== -1);
         }
-
-        if (questionType === "rating") {
-          ratingMax = item.rating_max || item.max_rating || 5;
-        }
-
-        return {
-          id: item.id || item.question_id || uid(),
-          text: item.question_text || item.text || "Untitled Question",
-          type: questionType,
-          options,
-          correctAnswer,
-          multiAnswers,
-          ratingMax,
-          meta: {
-            draft: false, // Existing questions are already saved
-            imageUrl: item.image_url || item.imageUrl || undefined,
-            explanation: item.explanation || undefined,
-            updatedAt: item.updated_at || item.updatedAt || undefined,
-            createdAt: item.created_at || item.createdAt || undefined,
-          },
-        };
-      });
-
-      console.log("Transformed questions:", loadedQuestions);
-      setQuestions(loadedQuestions);
-      
-      if (loadedQuestions.length > 0) {
-        setCurrentQuestionId(loadedQuestions[0].id);
       } else {
-        setCurrentQuestionId(null);
-      }
-      
-      // Update save state with last saved time
-      if (loadedQuestions.length > 0) {
-        // Find the most recent update time
-        const timestamps = loadedQuestions
-          .map(q => q.meta?.updatedAt)
-          .filter(Boolean)
-          .sort();
-        
-        const lastSaved = timestamps.length > 0 
-          ? timestamps[timestamps.length - 1] 
-          : null;
-        
-        setSaveState(prev => ({
-          ...prev,
-          lastSaved,
-          hasUnsavedChanges: false,
-        }));
+        // If no options in response, set defaults based on question type
+        if (questionType === "quiz" || questionType === "multi") {
+          options = ["Option 1", "Option 2"];
+          if (questionType === "quiz") {
+            correctAnswer = 0;
+          } else {
+            multiAnswers = [0];
+          }
+        }
       }
 
-    } catch (error: any) {
-      console.error("Failed to load questions:", error);
-      setLoadError(error.message || "Failed to load questions from server");
-      setQuestions([]);
-    } finally {
-      setLoading(false);
+      if (questionType === "rating") {
+        ratingMax = item.rating_max || item.max_rating || 5;
+      }
+
+      return {
+        id: item.id || item.question_id || uid(),
+        text: item.question_text || item.text || `Untitled Question ${index + 1}`,
+        type: questionType,
+        options,
+        correctAnswer,
+        multiAnswers,
+        ratingMax,
+        meta: {
+          draft: false, // Existing questions are already saved
+          imageUrl: item.image_url || item.imageUrl || undefined,
+          explanation: item.explanation || undefined,
+          updatedAt: item.updated_at || item.updatedAt || undefined,
+          createdAt: item.created_at || item.createdAt || undefined,
+        },
+      };
+    });
+
+    console.log("Transformed questions:", loadedQuestions);
+    setQuestions(loadedQuestions);
+    
+    if (loadedQuestions.length > 0) {
+      setCurrentQuestionId(loadedQuestions[0].id);
+    } else {
+      setCurrentQuestionId(null);
     }
-  }, [sessionId]);
+    
+    // Update save state with last saved time
+    if (loadedQuestions.length > 0) {
+      // Find the most recent update time
+      const timestamps = loadedQuestions
+        .map(q => q.meta?.updatedAt)
+        .filter(Boolean)
+        .sort();
+      
+      const lastSaved = timestamps.length > 0 
+        ? timestamps[timestamps.length - 1] 
+        : null;
+      
+      setSaveState(prev => ({
+        ...prev,
+        lastSaved,
+        hasUnsavedChanges: false,
+      }));
+    }
 
+  } catch (error: any) {
+    console.error("Failed to load questions:", error);
+    setLoadError(error.message || "Failed to load questions from server");
+    setQuestions([]);
+  } finally {
+    setLoading(false);
+  }
+}, [sessionId]);
   // Load questions on component mount
   useEffect(() => {
     loadExistingQuestions();
@@ -253,7 +258,7 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
         console.log("Saving question with payload:", payload);
 
         const response = await fetch(
-          `http://localhost:3000/api/sessions/${sessionId}/questions`,
+          `${API.node}/api/sessions/${sessionId}/questions`,
           {
             method: "POST",
             headers: {
@@ -484,7 +489,7 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
         };
 
         const response = await fetch(
-          `http://localhost:3000/api/sessions/${sessionId}/questions`,
+          `${API.node}/api/sessions/${sessionId}/questions`,
           {
             method: "POST",
             headers: {

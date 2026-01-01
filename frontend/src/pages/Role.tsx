@@ -16,6 +16,7 @@ import {
   BarChart3,
   Settings
 } from 'lucide-react';
+import { API } from '../api/config';
 
 // Navbar Component
 const Navbar: React.FC = () => {
@@ -170,7 +171,7 @@ const QuizVisionHome: React.FC = () => {
         formData.append('text', 'Participant role selected, going to the session page');
         
         console.log('Fetching TTS audio...');
-        const response = await fetch('http://127.0.0.1:5000/tts', {
+        const response = await fetch(`${API.node}/tts`, {
           method: 'POST',
           body: formData,
         });
@@ -307,7 +308,7 @@ const QuizVisionHome: React.FC = () => {
       const formData = new FormData();
       formData.append('text', 'Test audio');
       
-      const response = await fetch('http://127.0.0.1:5000/tts', {
+      const response = await fetch(`${API.python}/tts`, {
         method: 'POST',
         body: formData,
       });

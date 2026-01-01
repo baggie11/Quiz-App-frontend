@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'; // Add this
 import { type Session } from '../../types';
 import SessionCard from './SessionCard';
 import LoadingSpinner from '../Shared/LoadingSpinner';
+import { API } from '../../api/config';
 
 interface AllSessionsPageProps {
   sessions: Session[];
@@ -19,7 +20,7 @@ const AllSessionsPage: React.FC<AllSessionsPageProps> = ({ sessions, setSessions
     const fetchSessions = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:3000/api/session`, {
+        const response = await fetch(`${API.node}/api/session`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,

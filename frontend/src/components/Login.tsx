@@ -1,5 +1,6 @@
 import React, { useState} from "react";
 import { useNavigate } from "react-router-dom";
+import { API } from "../api/config";
 import { LogIn, Lock, User, Eye, EyeOff, Mail } from "lucide-react";
 
 interface HostLoginProps {
@@ -18,7 +19,7 @@ const HostLogin: React.FC<HostLoginProps> = ({ toggleToSignup }) => {
     }
     //send login details to the backend
     try{
-        const res = await fetch('http://localhost:3000/api/auth/user/login',{
+        const res = await fetch(`${API.node}/api/auth/user/login`,{
             method : "POST",
             headers : {
                 "Content-Type" : "application/json",

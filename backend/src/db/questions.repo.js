@@ -1,5 +1,9 @@
 import { supabase } from './index.js';
 import { getSessionByJoinCode } from './sessions.repo.js';
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 /**
  * Get a question by its ID
  * @param {string} questionId
@@ -23,11 +27,20 @@ export async function getQuestionById(questionId) {
 
 
 export async function getQuestionsBySession(joinCode) {
-  // 1️⃣ Resolve session
-  const session = await getSessionByJoinCode(joinCode);
+  let sessionId;
 
-  if (!session) {
-    throw new Error("Invalid or expired join code");
+  // 1️⃣ Check if joinCode is already a UUID (session_id)
+  if (UUID_REGEX.test(joinCode)) {
+    sessionId = joinCode;
+  } else {
+    // Otherwise resolve session using join code
+    const session = await getSessionByJoinCode(joinCode);
+
+    if (!session) {
+      throw new Error("Invalid or expired join code");
+    }
+
+    sessionId = session.id;
   }
 
   // 2️⃣ Fetch questions + options
@@ -43,7 +56,7 @@ export async function getQuestionsBySession(joinCode) {
         is_correct
       )
     `)
-    .eq("session_id", session.id)
+    .eq("session_id", sessionId)
     .order("order_index", { ascending: true });
 
   if (error) {

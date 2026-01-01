@@ -16,6 +16,7 @@ import {
   AlertCircle,
   VolumeX
 } from 'lucide-react';
+import { API } from '../api/config';
 
 // === TTS Functions (Coqui + Browser Fallback) ===
 
@@ -26,7 +27,7 @@ const speakWithCoqui = async (text: string, callback?: () => void): Promise<void
     const formData = new FormData();
     formData.append('text', text);
     
-    const response = await fetch('http://127.0.0.1:5000/tts', {
+    const response = await fetch(`${API.python}/tts`, {
       method: 'POST',
       body: formData,
     });
@@ -416,7 +417,7 @@ const QuizVision: React.FC = () => {
       
       console.log('Sending POST request to ASR endpoint...');
       
-      const response = await fetch('http://127.0.0.1:5000/asr', {
+      const response = await fetch(`${API.python}/asr`, {
         method: 'POST',
         body: formData,
         signal: controller.signal,
@@ -710,7 +711,7 @@ const QuizVision: React.FC = () => {
 
     setIsLoadingAudio(true);
     try {
-      const res = await fetch('http://localhost:3000/api/session/check-exists', {
+      const res = await fetch(`${API.node}/api/session/check-exists`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ joinCode: code }),

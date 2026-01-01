@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { UserPlus, Lock, User, Mail, Eye, EyeOff, Phone, Briefcase } from "lucide-react";
+import { API } from "../api/config";
 
 interface HostSignupProps {
   toggleToLogin: () => void;
@@ -40,7 +41,7 @@ const HostSignup: React.FC<HostSignupProps> = ({ toggleToLogin }) => {
 
     //send the data to the backend
     try{
-        const response = await fetch(`http://localhost:3000/api/auth/user/signup`,{
+        const response = await fetch(`${API.node}/api/auth/user/signup`,{
             method : "POST",
             headers : {
                 "Content-Type" : "application/json",
