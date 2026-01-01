@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect } from 'react';
+import { forwardRef, useEffect } from 'react';
 import { type Question } from '../../types';
 import { X, Eye, CheckCircle, Star, Type, MessageSquare, ClipboardList, ChevronRight } from 'lucide-react';
 

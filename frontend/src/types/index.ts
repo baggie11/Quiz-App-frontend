@@ -105,3 +105,7 @@ export interface QuestionBuilderProps {
   autoSaveInterval?: number; // Add this for configurable auto-save
 }
 
+// export interface QuestionOption {
+//   id: string;     // 👈 UUID from DB
+//   text: string;
+// }

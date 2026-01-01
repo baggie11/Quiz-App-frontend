@@ -30,7 +30,6 @@ const defaultOption = (n = 1): string => `Option ${n}`;
 
 export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
   sessionId: propSessionId,
-  onSave,
   onPreview,
   initialQuestions = [],
 }) => {

@@ -1,7 +1,7 @@
 // components/AllSessions/SessionCard.tsx
 import React from 'react';
 import { type Session } from '../../types';
-import { Calendar, Clock, Users, Edit, ArrowRight } from 'lucide-react';
+import { Calendar, Edit, ArrowRight } from 'lucide-react';
 
 interface SessionCardProps {
   session: Session;

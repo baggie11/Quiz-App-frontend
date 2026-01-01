@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { UserPlus, Lock, User, Mail, Eye, EyeOff, Phone, Briefcase } from "lucide-react";
+import { UserPlus, Eye, EyeOff } from "lucide-react";
 import { API } from "../api/config";
 
 interface HostSignupProps {

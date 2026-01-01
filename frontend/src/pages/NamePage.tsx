@@ -1633,7 +1633,7 @@
 
 // export default RollNumberVision;
 
-import React, { useState, useRef, useEffect, type ChangeEvent, type JSX } from 'react';
+import React, { useState, useRef, useEffect, type ChangeEvent} from 'react';
 import { 
   CheckCircle,
   Globe,

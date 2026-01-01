@@ -1,18 +1,16 @@
 import React from 'react';
 import {
-  Home,
+
   PlusCircle,
   Calendar,
-  FileText,
-  Users,
-  BarChart,
+
   Settings,
   Brain,
-  HelpCircle,
+
 } from 'lucide-react';
 import { type MenuItem } from '../../types';
 import  SidebarItem from './SidebarItem';
-import HelpSection from './HelpSection';
+
 
 interface SidebarProps {
   isOpen: boolean;
@@ -23,12 +21,8 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activePage, setActivePage }) => {
   const menuItems: MenuItem[] = [
-    { id: 'dashboard', icon: Home, label: 'Dashboard' },
     { id: 'new-session', icon: PlusCircle, label: 'New Session' },
     { id: 'sessions', icon: Calendar, label: 'All Sessions' },
-    { id: 'questions', icon: FileText, label: 'Question Bank' },
-    { id: 'participants', icon: Users, label: 'Participants' },
-    { id: 'analytics', icon: BarChart, label: 'Analytics' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
 
@@ -78,23 +72,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activePage, setActiv
               />
             ))}
           </ul>
-
-          <HelpSection />
         </nav>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50">
-            <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
-              <span className="text-xs font-bold text-white">AI</span>
-            </div>
-            <div className="flex-1">
-              <p className="text-xs font-medium text-gray-900">Smart Assistant</p>
-              <p className="text-xs text-gray-500">Ready to help</p>
-            </div>
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          </div>
-        </div>
+        
       </aside>
     </>
   );

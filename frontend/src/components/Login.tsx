@@ -1,7 +1,7 @@
 import React, { useState} from "react";
 import { useNavigate } from "react-router-dom";
 import { API } from "../api/config";
-import { LogIn, Lock, User, Eye, EyeOff, Mail } from "lucide-react";
+import { LogIn,  Eye, EyeOff} from "lucide-react";
 
 interface HostLoginProps {
   toggleToSignup: () => void;

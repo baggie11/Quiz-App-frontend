@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
 import { 
-  Save, 
-  Download, 
-  Upload, 
   Eye, 
   Clock, 
   AlertCircle,
