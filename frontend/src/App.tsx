@@ -21,11 +21,8 @@ function App() {
       onSave={(questions) => console.log('Save:', questions)}
       onPreview={(questions) => console.log('Preview:', questions)}
     />} />
-        {/* <Route path = "/simpletts" element = {<SimpleTTS/>}/> */}
+
         <Route path = "/enter-name" element = {<RollNumberVision/>}/>
-        {/* Add more routes below when you create new pages */}
-        {/* <Route path="/dashboard" element={<Dashboard />} /> */}
-        {/* <Route path="/login" element={<Login />} /> */}
         <Route path = "/session/:sessionId" element = {<QuizPlayPage/>}/>
       </Routes>
     </Router>

@@ -727,14 +727,14 @@
 // export default QuizVoiceAgent;
 
 import React, { useState, useEffect, useRef } from 'react';
-import { PipecatClient, type PipecatClientOptions, RTVIEvent } from '@pipecat-ai/client-js';
+import { PipecatClient, type PipecatClientOptions} from '@pipecat-ai/client-js'; // , RTVIEvent 
 import { WebSocketTransport } from '@pipecat-ai/websocket-transport';
 import { 
-  Mic, MicOff, Volume2, Radio, MessageSquare, 
-  CheckCircle, XCircle, HelpCircle, RefreshCw,
-  Play, Pause, Headphones, Zap, Eye, LogIn,
-  User, Users, Award, ClipboardCheck, BarChart3,
-  Settings, ArrowRight, Sparkles, Terminal
+  Mic, MicOff, MessageSquare, 
+   XCircle, HelpCircle, RefreshCw,
+  Eye, LogIn,
+ 
+  Terminal
 } from 'lucide-react';
 
 // Types
