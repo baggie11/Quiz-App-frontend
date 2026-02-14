@@ -1,12 +1,9 @@
 import React from 'react';
 import {
-
   PlusCircle,
   Calendar,
-
   Settings,
-  Brain,
-
+  Brain
 } from 'lucide-react';
 import { type MenuItem } from '../../types';
 import  SidebarItem from './SidebarItem';
@@ -39,29 +36,36 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activePage, setActiv
       <aside
         className={`
           fixed inset-y-0 left-0 z-40
-          w-64 bg-white border-r border-gray-200
-          transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
-          lg:translate-x-0
+          w-72
+          border-r border-slate-200
+          bg-white
+          transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}
           transition-transform duration-300 ease-in-out
+          lg:translate-x-0
           flex flex-col
         `}
       >
+
         {/* Logo */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#2563eb] to-[#3b82f6] rounded-xl flex items-center justify-center">
-              <Brain className="text-white" size={24} />
+        <div className="border-b border-slate-200 px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white">
+                <Brain size={20} />
+              </div>
+              <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">QuizVision</h1>
-              <p className="text-xs text-gray-500">Instructor Dashboard</p>
+              <h1 className="text-2xl font-semibold text-black tracking-tight ">Shravya</h1>
+              <p className="mt-0.5 text-xs text-slate-500">Instructor Dashboard</p>
             </div>
           </div>
         </div>
 
+
         {/* Navigation */}
-        <nav className="flex-1 p-4 overflow-y-auto">
-          <ul className="space-y-1">
+        <nav className="flex-1 overflow-y-auto px-4 py-5">
+          <ul className="space-y-1.5">
             {menuItems.map((item) => (
               <SidebarItem
                 key={item.id}

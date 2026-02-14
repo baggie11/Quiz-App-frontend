@@ -5,6 +5,7 @@ import CreateSessionForm from '../CreateSession/CreateSessionForm';
 import AllSessionsPage from '../AllSessions/AllSessionsPage';
 import LoadingSpinner from '../Shared/LoadingSpinner';
 import { type UserType, type Session } from '../../types';
+import Footer from '../Footer';
 
 const Dashboard: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -73,8 +74,8 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex">
+    <div className="min-h-screen bg-slate-50">
+      <div className="flex min-h-screen">
         <Sidebar
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
@@ -82,12 +83,13 @@ const Dashboard: React.FC = () => {
           setActivePage={setActivePage}
         />
 
-        <div className="flex-1 min-h-screen lg:ml-64">
+        <div className="flex min-h-screen w-full flex-col lg:pl-72">
           <TopBar onMenuClick={() => setSidebarOpen(true)} />
           
-          <main className="p-4 lg:p-8 h-[calc(100vh-64px)] overflow-y-auto">
+          <main className="flex-1 px-4 py-6 lg:px-8">
             {renderContent()}
           </main>
+          <Footer />
         </div>
       </div>
     </div>

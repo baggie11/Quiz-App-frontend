@@ -5,8 +5,8 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import { useNavigate } from 'react-router-dom'; // Add this import
-import { ArrowLeft, AlertCircle } from 'lucide-react'; // Add ArrowLeft import
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, AlertCircle, ChevronLeft } from 'lucide-react';
 import { API } from '../api/config';
 
 import type {
@@ -33,7 +33,7 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
   onPreview,
   initialQuestions = [],
 }) => {
-  const navigate = useNavigate(); // Add navigate hook
+  const navigate = useNavigate();
   const [questions, setQuestions] = useState<Question[]>(initialQuestions);
   const [paletteOpen, setPaletteOpen] = useState(true);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -55,173 +55,157 @@ export const QuestionBuilderPage: React.FC<QuestionBuilderProps> = ({
   const { sessionId: paramSessionId } = useParams<{ sessionId?: string }>();
   const sessionId = paramSessionId || propSessionId;
 
-  // Handle back button click
   const handleBackClick = useCallback(() => {
-    navigate(-1); // Go back to previous page
+    navigate(-1);
   }, [navigate]);
 
   // Load existing questions from the database
-  // Replace the loadExistingQuestions function in your code with this version:
-
-// Load existing questions from the database
-const loadExistingQuestions = useCallback(async () => {
-  if (!sessionId) {
-    setLoading(false);
-    return;
-  }
-
-  setLoading(true);
-  setLoadError(null);
-
-  try {
-    const token = localStorage.getItem("token");
-    
-    const response = await fetch(
-      `${API.node}/api/sessions/${sessionId}/questions`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(errText || "Failed to load questions");
-    }
-
-    const result = await response.json();
-    console.log("Loaded questions from server:", result);
-
-    // Extract questions from the response format
-    // Response format: {"status":"ok","data":[...]}
-    const questionsData = result.data || [];
-    
-    if (!Array.isArray(questionsData)) {
-      console.warn("Expected questions data to be an array, got:", questionsData);
-      setQuestions([]);
+  const loadExistingQuestions = useCallback(async () => {
+    if (!sessionId) {
       setLoading(false);
       return;
     }
 
-    // Transform API data to local Question format
-    const loadedQuestions: Question[] = questionsData.map((item: any, index: number) => {
-      // Map API question_type to local QType
-      const typeMap: Record<string, QType> = {
-        MCQ: "quiz",           // Multiple Choice Question
-        "multiple_choice": "quiz",
-        MSQ: "multi",          // Multiple Select Question  
-        "multiple_select": "multi",
-        RATING: "rating",
-        "rating": "rating",
-        OPEN_ENDED: "open",
-        "open_ended": "open",
-      };
+    setLoading(true);
+    setLoadError(null);
 
-      // Default to quiz if type not recognized
-      const questionType = typeMap[item.question_type] || "quiz";
+    try {
+      const token = localStorage.getItem("token");
       
-      let options: string[] | undefined;
-      let correctAnswer: number | undefined;
-      let multiAnswers: number[] | undefined;
-      let ratingMax: number | undefined;
+      const response = await fetch(
+        `${API.node}/api/sessions/${sessionId}/questions`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      // Handle the actual API format: question_options array
-      if (item.question_options && Array.isArray(item.question_options)) {
-        options = item.question_options.map((opt: any) => 
-          opt.option_text || opt.text || opt.option_text || ""
-        );
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || "Failed to load questions");
+      }
+
+      const result = await response.json();
+      console.log("Loaded questions from server:", result);
+
+      const questionsData = result.data || [];
+      
+      if (!Array.isArray(questionsData)) {
+        console.warn("Expected questions data to be an array, got:", questionsData);
+        setQuestions([]);
+        setLoading(false);
+        return;
+      }
+
+      const loadedQuestions: Question[] = questionsData.map((item: any, index: number) => {
+        const typeMap: Record<string, QType> = {
+          MCQ: "quiz",
+          "multiple_choice": "quiz",
+          MSQ: "multi",
+          "multiple_select": "multi",
+          RATING: "rating",
+          "rating": "rating",
+          OPEN_ENDED: "open",
+          "open_ended": "open",
+        };
+
+        const questionType = typeMap[item.question_type] || "quiz";
         
-        if (questionType === "quiz") {
-          // Find the first correct option index for single choice
-          const correctIndex = item.question_options.findIndex((opt: any) => opt.is_correct);
-          if (correctIndex !== -1) {
-            correctAnswer = correctIndex;
-          }
-        } else if (questionType === "multi") {
-          // Find all correct option indices for multiple choice
-          multiAnswers = item.question_options
-            .map((opt: any, idx: number) => (opt.is_correct ? idx : -1))
-            .filter((idx: number) => idx !== -1);
-        }
-      } else {
-        // If no options in response, set defaults based on question type
-        if (questionType === "quiz" || questionType === "multi") {
-          options = ["Option 1", "Option 2"];
+        let options: string[] | undefined;
+        let correctAnswer: number | undefined;
+        let multiAnswers: number[] | undefined;
+        let ratingMax: number | undefined;
+
+        if (item.question_options && Array.isArray(item.question_options)) {
+          options = item.question_options.map((opt: any) => 
+            opt.option_text || opt.text || opt.option_text || ""
+          );
+          
           if (questionType === "quiz") {
-            correctAnswer = 0;
-          } else {
-            multiAnswers = [0];
+            const correctIndex = item.question_options.findIndex((opt: any) => opt.is_correct);
+            if (correctIndex !== -1) {
+              correctAnswer = correctIndex;
+            }
+          } else if (questionType === "multi") {
+            multiAnswers = item.question_options
+              .map((opt: any, idx: number) => (opt.is_correct ? idx : -1))
+              .filter((idx: number) => idx !== -1);
+          }
+        } else {
+          if (questionType === "quiz" || questionType === "multi") {
+            options = ["Option 1", "Option 2"];
+            if (questionType === "quiz") {
+              correctAnswer = 0;
+            } else {
+              multiAnswers = [0];
+            }
           }
         }
+
+        if (questionType === "rating") {
+          ratingMax = item.rating_max || item.max_rating || 5;
+        }
+
+        return {
+          id: item.id || item.question_id || uid(),
+          text: item.question_text || item.text || `Untitled Question ${index + 1}`,
+          type: questionType,
+          options,
+          correctAnswer,
+          multiAnswers,
+          ratingMax,
+          meta: {
+            draft: false,
+            imageUrl: item.image_url || item.imageUrl || undefined,
+            explanation: item.explanation || undefined,
+            updatedAt: item.updated_at || item.updatedAt || undefined,
+            createdAt: item.created_at || item.createdAt || undefined,
+          },
+        };
+      });
+
+      console.log("Transformed questions:", loadedQuestions);
+      setQuestions(loadedQuestions);
+      
+      if (loadedQuestions.length > 0) {
+        setCurrentQuestionId(loadedQuestions[0].id);
+      } else {
+        setCurrentQuestionId(null);
+      }
+      
+      if (loadedQuestions.length > 0) {
+        const timestamps = loadedQuestions
+          .map(q => q.meta?.updatedAt)
+          .filter(Boolean)
+          .sort();
+        
+        const lastSaved = timestamps.length > 0 
+          ? timestamps[timestamps.length - 1] 
+          : null;
+        
+        setSaveState(prev => ({
+          ...prev,
+          lastSaved,
+          hasUnsavedChanges: false,
+        }));
       }
 
-      if (questionType === "rating") {
-        ratingMax = item.rating_max || item.max_rating || 5;
-      }
-
-      return {
-        id: item.id || item.question_id || uid(),
-        text: item.question_text || item.text || `Untitled Question ${index + 1}`,
-        type: questionType,
-        options,
-        correctAnswer,
-        multiAnswers,
-        ratingMax,
-        meta: {
-          draft: false, // Existing questions are already saved
-          imageUrl: item.image_url || item.imageUrl || undefined,
-          explanation: item.explanation || undefined,
-          updatedAt: item.updated_at || item.updatedAt || undefined,
-          createdAt: item.created_at || item.createdAt || undefined,
-        },
-      };
-    });
-
-    console.log("Transformed questions:", loadedQuestions);
-    setQuestions(loadedQuestions);
-    
-    if (loadedQuestions.length > 0) {
-      setCurrentQuestionId(loadedQuestions[0].id);
-    } else {
-      setCurrentQuestionId(null);
+    } catch (error: any) {
+      console.error("Failed to load questions:", error);
+      setLoadError(error.message || "Failed to load questions from server");
+      setQuestions([]);
+    } finally {
+      setLoading(false);
     }
-    
-    // Update save state with last saved time
-    if (loadedQuestions.length > 0) {
-      // Find the most recent update time
-      const timestamps = loadedQuestions
-        .map(q => q.meta?.updatedAt)
-        .filter(Boolean)
-        .sort();
-      
-      const lastSaved = timestamps.length > 0 
-        ? timestamps[timestamps.length - 1] 
-        : null;
-      
-      setSaveState(prev => ({
-        ...prev,
-        lastSaved,
-        hasUnsavedChanges: false,
-      }));
-    }
+  }, [sessionId]);
 
-  } catch (error: any) {
-    console.error("Failed to load questions:", error);
-    setLoadError(error.message || "Failed to load questions from server");
-    setQuestions([]);
-  } finally {
-    setLoading(false);
-  }
-}, [sessionId]);
-  // Load questions on component mount
   useEffect(() => {
     loadExistingQuestions();
   }, [loadExistingQuestions]);
 
-  // Save a single question to the server
   const saveSingleQuestion = useCallback(
     async (question: Question): Promise<boolean> => {
       setSaveState(prev => ({ ...prev, isSaving: true, saveError: null }));
@@ -257,7 +241,7 @@ const loadExistingQuestions = useCallback(async () => {
         console.log("Saving question with payload:", payload);
 
         const response = await fetch(
-          `${API.node}/api/sessions/${sessionId}/questions`,
+           `${API.node}/api/sessions/${sessionId}/questions`,
           {
             method: "POST",
             headers: {
@@ -273,7 +257,6 @@ const loadExistingQuestions = useCallback(async () => {
           throw new Error(errText || "Failed to save question");
         }
 
-        // Mark as saved (not draft)
         setQuestions(prev =>
           prev.map(q =>
             q.id === question.id
@@ -311,7 +294,6 @@ const loadExistingQuestions = useCallback(async () => {
     [sessionId, questions]
   );
 
-  // Mark question as dirty when changed (but don't auto-save)
   const updateQuestion = useCallback(
     (id: string, patch: Partial<Question>) => {
       setQuestions(prev => {
@@ -340,7 +322,6 @@ const loadExistingQuestions = useCallback(async () => {
     []
   );
 
-  // Add option and mark as draft
   const addOption = useCallback((questionId: string) => {
     setQuestions(prev => {
       const updated = prev.map(q => {
@@ -367,7 +348,6 @@ const loadExistingQuestions = useCallback(async () => {
     });
   }, []);
 
-  // Update option and mark as draft
   const updateOption = useCallback(
     (questionId: string, idx: number, value: string) => {
       setQuestions(prev => {
@@ -397,7 +377,6 @@ const loadExistingQuestions = useCallback(async () => {
     []
   );
 
-  // Remove option and mark as draft
   const removeOption = useCallback(
     (questionId: string, idx: number) => {
       setQuestions(prev => {
@@ -435,7 +414,6 @@ const loadExistingQuestions = useCallback(async () => {
     []
   );
 
-  // Add new question
   const addQuestion = useCallback(
     async (type: QType = "quiz") => {
       if (loading) {
@@ -524,7 +502,6 @@ const loadExistingQuestions = useCallback(async () => {
     [sessionId, questions.length, loading]
   );
 
-  // Next Question: Save current question first, then add new
   const handleNextQuestion = useCallback(async () => {
     if (loading) return;
 
@@ -539,16 +516,13 @@ const loadExistingQuestions = useCallback(async () => {
       return;
     }
 
-    // Only save if it's a draft (has unsaved changes)
     if (currentQuestion.meta?.draft) {
       const saved = await saveSingleQuestion(currentQuestion);
       if (!saved) {
-        // Don't proceed if save failed
         return;
       }
     }
 
-    // Add new question and set it as current
     await addQuestion("quiz");
   }, [currentQuestionId, questions, addQuestion, saveSingleQuestion, loading]);
 
@@ -610,7 +584,6 @@ const loadExistingQuestions = useCallback(async () => {
     [questions]
   );
 
-  // Update current question when question list changes
   useEffect(() => {
     if (questions.length > 0 && !currentQuestionId && !loading) {
       setCurrentQuestionId(questions[0].id);
@@ -620,10 +593,10 @@ const loadExistingQuestions = useCallback(async () => {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-white">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading questions...</p>
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900"></div>
+          <p className="mt-4 text-sm text-slate-500">Loading questions...</p>
         </div>
       </div>
     );
@@ -632,23 +605,23 @@ const loadExistingQuestions = useCallback(async () => {
   // Error state
   if (loadError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md p-6 bg-white rounded-2xl shadow-sm">
-          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-            <AlertCircle className="w-6 h-6 text-red-600" />
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <div className="max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-rose-100">
+            <AlertCircle className="h-6 w-6 text-rose-600" />
           </div>
-          <h3 className="mt-4 text-lg font-semibold text-gray-900">Failed to load questions</h3>
-          <p className="mt-2 text-gray-600">{loadError}</p>
-          <div className="flex gap-3 mt-4">
+          <h3 className="mb-1 text-base font-semibold text-slate-900">Failed to load questions</h3>
+          <p className="mb-4 text-sm text-slate-500">{loadError}</p>
+          <div className="flex gap-2">
             <button
               onClick={loadExistingQuestions}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+              className="flex-1 rounded-xl border border-slate-900 bg-slate-900 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-800"
             >
               Retry
             </button>
             <button
               onClick={handleBackClick}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+              className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
             >
               Go Back
             </button>
@@ -659,17 +632,18 @@ const loadExistingQuestions = useCallback(async () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="sticky top-0 z-40 bg-white border-b">
-        <div className="max-w-7xl mx-auto px-6 py-3">
-          <div className="flex items-center gap-4 mb-2">
+    <div className="min-h-screen bg-white">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-md">
+        <div className="mx-auto max-w-7xl px-6 py-3">
+          <div className="flex items-center gap-3">
             {/* Back Button */}
             <button
               onClick={handleBackClick}
-              className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-slate-600 transition hover:bg-slate-100"
             >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Back</span>
+              <ChevronLeft size={16} />
+              <span>Back</span>
             </button>
             
             {/* Header Content */}
@@ -690,29 +664,37 @@ const loadExistingQuestions = useCallback(async () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 mt-4">
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <div className="flex gap-2 flex-wrap">
+      {/* Filter Bar */}
+      <div className="mx-auto max-w-7xl px-6 pt-4">
+        <div className="rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+          <div className="flex flex-wrap gap-1">
             {(["all", "quiz", "multi", "rating", "open", "drafts"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                   filter === f
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-100 hover:bg-gray-200"
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                 }`}
               >
-                {f.charAt(0).toUpperCase() + f.slice(1)}
+                {f === "all" ? "All" : 
+                 f === "quiz" ? "Single Choice" :
+                 f === "multi" ? "MCQ" :
+                 f === "rating" ? "Rating" :
+                 f === "open" ? "Open Text" :
+                 "Drafts"}
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 mt-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
-          <aside className="sticky top-32 self-start">
+      {/* Main Content */}
+      <div className="mx-auto max-w-7xl px-6 py-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
+          {/* Sidebar */}
+          <aside className="sticky top-28 self-start">
             <QuestionPalette
               isOpen={paletteOpen}
               onToggle={() => setPaletteOpen(!paletteOpen)}
@@ -721,16 +703,20 @@ const loadExistingQuestions = useCallback(async () => {
             />
           </aside>
 
-          <main className="space-y-5">
+          {/* Main Content */}
+          <main className="space-y-4">
             {filteredQuestions.length === 0 ? (
-              <div className="bg-white border border-dashed rounded-2xl p-10 text-center">
-                <h3 className="text-lg font-semibold">No questions</h3>
-                <p className="text-gray-500 mt-2">Add one from the palette</p>
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100">
+                  <AlertCircle size={24} className="text-slate-400" />
+                </div>
+                <h3 className="mb-1 text-sm font-semibold text-slate-900">No questions found</h3>
+                <p className="mb-4 text-xs text-slate-500">Add a question from the palette to get started</p>
                 <button
-                  onClick={handleBackClick}
-                  className="mt-4 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+                  onClick={() => addQuestion("quiz")}
+                  className="rounded-xl border border-slate-900 bg-slate-900 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-800"
                 >
-                  Go Back
+                  Add First Question
                 </button>
               </div>
             ) : (
@@ -739,7 +725,11 @@ const loadExistingQuestions = useCallback(async () => {
                   key={q.id} 
                   data-question-id={q.id}
                   onClick={() => setCurrentQuestionId(q.id)}
-                  className={currentQuestionId === q.id ? 'ring-2 ring-indigo-300 rounded-2xl' : ''}
+                  className={`rounded-2xl transition-all ${
+                    currentQuestionId === q.id 
+                      ? 'shadow-md ring-2 ring-slate-900/10' 
+                      : 'hover:shadow-sm'
+                  }`}
                 >
                   <QuestionEditor
                     question={q}
@@ -758,18 +748,19 @@ const loadExistingQuestions = useCallback(async () => {
               ))
             )}
 
-            {filter === "all" && (
+            {filter === "all" && questions.length > 0 && (
               <button
                 onClick={() => addQuestion("quiz")}
-                className="hidden lg:block w-full py-6 border-2 border-dashed rounded-2xl hover:bg-gray-50 text-gray-600 font-medium"
+                className="w-full rounded-2xl border-2 border-dashed border-slate-200 py-4 text-sm font-medium text-slate-500 transition hover:border-slate-300 hover:bg-slate-50"
               >
-                + Add Question
+                + Add Another Question
               </button>
             )}
           </main>
         </div>
       </div>
 
+      {/* Preview Modal */}
       <QuestionPreview
         isOpen={previewOpen}
         questions={questions}

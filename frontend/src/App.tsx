@@ -3,7 +3,7 @@ import HostAuthPage from "./pages/AuthPage";
 import DashboardPage from "./pages/Dashboard";
 import QuestionBuilderPage from "./pages/QuestionBuilderPageWrapper";
 import QuizVisionHome from "./pages/Role";
-import QuizVision from "./pages/LandingPage";
+import QuizVoiceAgent from "./pages/LandingPage";
 import RollNumberVision from "./pages/NamePage";
 import QuizPlayPage from "./pages/SessionPage";
 
@@ -13,7 +13,7 @@ function App() {
       <Routes>
         {/* Landing Page */}
         <Route path = "/" element = {<QuizVisionHome/>}/>
-        <Route path = "/join-session" element = {<QuizVision/>}/>
+        <Route path = "/join-session" element = {<QuizVoiceAgent/>}/>
         <Route path = "/auth" element = {<HostAuthPage/>}/>
         <Route path = "/dashboard" element = {<DashboardPage/>}/>
         <Route path="/session/:sessionId/questions" element={<QuestionBuilderPage 

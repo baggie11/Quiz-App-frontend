@@ -1,29 +1,40 @@
-// components/AllSessions/AllSessionsPage.tsx
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // Add this
-import { type Session } from '../../types';
-import SessionCard from './SessionCard';
-import LoadingSpinner from '../Shared/LoadingSpinner';
-import { API } from '../../api/config';
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { CalendarClock, CheckCircle2, Radio, Calendar, Clock, Filter } from "lucide-react";
+import { type Session } from "../../types";
+import SessionCard from "./SessionCard";
+import LoadingSpinner from "../Shared/LoadingSpinner";
+import { API } from "../../api/config";
 
 interface AllSessionsPageProps {
   sessions: Session[];
   setSessions: React.Dispatch<React.SetStateAction<Session[]>>;
 }
 
+type StatusId = "all" | "draft" | "upcoming" | "livenow" | "completed" | "notscheduled";
+
+const FILTERS: ReadonlyArray<{ id: StatusId; label: string }> = [
+  { id: "all", label: "All" },
+  { id: "draft", label: "Drafts" },
+  { id: "upcoming", label: "Upcoming" },
+  { id: "livenow", label: "Live Now" },
+  { id: "completed", label: "Completed" },
+  { id: "notscheduled", label: "Not Scheduled" },
+];
+
 const AllSessionsPage: React.FC<AllSessionsPageProps> = ({ sessions, setSessions }) => {
-  const navigate = useNavigate(); // Add this
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<StatusId>("all");
 
   useEffect(() => {
     const fetchSessions = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem("token");
         const response = await fetch(`${API.node}/api/session`, {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
         });
         const json = await response.json();
@@ -46,126 +57,167 @@ const AllSessionsPage: React.FC<AllSessionsPageProps> = ({ sessions, setSessions
     const now = new Date();
     const start = session.start_date ? new Date(session.start_date) : null;
     const end = session.end_date ? new Date(session.end_date) : null;
-    
+
     if (session.draft) {
-      return { text: 'Draft', color: 'bg-blue-100 text-blue-800', icon: '📝' };
+      return { text: "Draft", color: "bg-slate-100 text-slate-700" };
     }
     if (!start) {
-      return { text: 'Not Scheduled', color: 'bg-gray-100 text-gray-800', icon: '⏳' };
+      return { text: "Not Scheduled", color: "bg-slate-100 text-slate-700" };
     }
     if (end && now > end) {
-      return { text: 'Completed', color: 'bg-emerald-100 text-emerald-800', icon: '✅' };
+      return { text: "Completed", color: "bg-emerald-100 text-emerald-700" };
     }
     if (now >= start && (!end || now <= end)) {
-      return { text: 'Live Now', color: 'bg-red-100 text-red-600', icon: '🔴' };
+      return { text: "Live Now", color: "bg-rose-100 text-rose-700" };
     }
     if (now < start) {
-      return { text: 'Upcoming', color: 'bg-amber-100 text-amber-800', icon: '' };
+      return { text: "Upcoming", color: "bg-amber-100 text-amber-700" };
     }
-    return { text: 'Active', color: 'bg-blue-100 text-blue-800', icon: '📊' };
+    return { text: "Active", color: "bg-indigo-100 text-indigo-700" };
   };
 
-  const filteredSessions = sessions.filter(session => {
-    if (filterStatus === 'all') return true;
+  const filteredSessions = sessions.filter((session) => {
+    if (filterStatus === "all") return true;
     const status = getSessionStatus(session);
-    return status.text.toLowerCase().replace(' ', '') === filterStatus;
+    return status.text.toLowerCase().replace(" ", "") === filterStatus;
   });
 
-  // Add this function to handle session click
+  const liveCount = sessions.filter((s) => getSessionStatus(s).text === "Live Now").length;
+  const upcomingCount = sessions.filter((s) => getSessionStatus(s).text === "Upcoming").length;
+  const completedCount = sessions.filter((s) => getSessionStatus(s).text === "Completed").length;
+
   const handleSessionClick = (sessionId: string) => {
     navigate(`/session/${sessionId}/questions`);
   };
 
+  const handleDeleteSession = async (sessionId: string) => {
+    const confirmed = window.confirm("Delete this session? This will remove its questions and participants.");
+    if (!confirmed) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API.node}/api/session/${sessionId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Failed to delete session");
+      }
+
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    } catch (error) {
+      console.error("Delete session error:", error);
+      alert("Failed to delete session. Please try again.");
+    }
+  };
+
   if (loading) return <LoadingSpinner message="Loading sessions..." />;
-  if (!sessions.length) return <div className="text-center py-20 text-gray-500">No sessions found</div>;
+
+  if (!sessions.length) {
+    return (
+      <div className="mx-auto w-full max-w-7xl px-6 py-10">
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-16 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100">
+            <Calendar size={24} className="text-slate-400" />
+          </div>
+          <h2 className="text-lg font-semibold text-slate-900">No sessions yet</h2>
+          <p className="mt-1 text-sm text-slate-500">Create your first session to get started.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full mx-auto px-6 py-8">
+    <div className="mx-auto w-full max-w-7xl px-6 py-8">
       {/* Header */}
-      <div className="mb-10">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-3">All Sessions</h1>
-            <p className="text-gray-600 text-lg">
-              {filteredSessions.length} session{filteredSessions.length !== 1 ? 's' : ''} • Total: {sessions.length}
-            </p>
-          </div>
-        </div>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-slate-900">All Sessions</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          {filteredSessions.length} visible of {sessions.length} total
+        </p>
+      </div>
 
-        {/* Filter buttons */}
-        <div className="flex gap-2 mb-6">
-          {['all', 'draft', 'upcoming', 'livenow', 'completed', 'notscheduled'].map((status) => (
-            <button
-              key={status}
-              onClick={() => setFilterStatus(status)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                filterStatus === status
-                  ? 'bg-[#2563eb] text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {status === 'all' ? 'All' : 
-               status === 'draft' ? 'Drafts' :
-               status === 'livenow' ? 'Live Now' :
-               status === 'notscheduled' ? 'Not Scheduled' :
-               status.charAt(0).toUpperCase() + status.slice(1)}
-            </button>
-          ))}
+      {/* Stats Cards */}
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-2">
+            <div className="rounded-lg bg-rose-100 p-2">
+              <Radio size={16} className="text-rose-600" />
+            </div>
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Live Now</span>
+          </div>
+          <p className="mt-2 text-2xl font-semibold text-slate-900">{liveCount}</p>
+        </div>
+        
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-2">
+            <div className="rounded-lg bg-amber-100 p-2">
+              <CalendarClock size={16} className="text-amber-600" />
+            </div>
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Upcoming</span>
+          </div>
+          <p className="mt-2 text-2xl font-semibold text-slate-900">{upcomingCount}</p>
+        </div>
+        
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-2">
+            <div className="rounded-lg bg-emerald-100 p-2">
+              <CheckCircle2 size={16} className="text-emerald-600" />
+            </div>
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Completed</span>
+          </div>
+          <p className="mt-2 text-2xl font-semibold text-slate-900">{completedCount}</p>
         </div>
       </div>
 
-      {/* Sessions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredSessions.map((session) => (
-          <div 
-            key={session.id} 
-            onClick={() => handleSessionClick(session.id)} 
-            className="cursor-pointer"
+      {/* Filters */}
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5">
+          <Filter size={14} className="text-slate-400" />
+          <span className="text-xs font-medium text-slate-500">Status:</span>
+        </div>
+        {FILTERS.map((status) => (
+          <button
+            key={status.id}
+            onClick={() => setFilterStatus(status.id)}
+            className={`rounded-xl px-3 py-1.5 text-xs font-medium transition-colors ${
+              filterStatus === status.id
+                ? "bg-slate-900 text-white"
+                : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+            }`}
           >
-            <SessionCard 
-              session={session} 
-              getSessionStatus={getSessionStatus} 
-            />
-          </div>
+            {status.label}
+          </button>
         ))}
       </div>
 
-      {/* Footer Legend */}
-      <div className="mt-12 pt-8 border-t border-gray-200">
-        <div className="flex flex-col md:flex-row justify-between items-center">
-          <div className="text-gray-600 mb-4 md:mb-0">
-            <span className="font-semibold text-gray-900">{filteredSessions.length}</span> sessions • 
-            <span className="font-semibold text-gray-900 ml-2">{sessions.length}</span> total
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {['Draft', 'Upcoming', 'Live Now', 'Completed', 'Not Scheduled'].map((status) => (
-              <div key={status} className="flex items-center">
-                <div className={`w-3 h-3 ${
-                  status === 'Draft' ? 'bg-blue-100' :
-                  status === 'Upcoming' ? 'bg-amber-100' :
-                  status === 'Live Now' ? 'bg-red-100' :
-                  status === 'Completed' ? 'bg-emerald-100' : 'bg-gray-100'
-                } rounded-full mr-2`} />
-                <span className="text-sm text-gray-600">{status}</span>
-              </div>
-            ))}
-          </div>
+      {/* Sessions Grid */}
+      {filteredSessions.length > 0 ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {filteredSessions.map((session) => (
+            <div key={session.id} onClick={() => handleSessionClick(session.id)} className="cursor-pointer">
+              <SessionCard
+                session={session}
+                onDelete={handleDeleteSession}
+                getSessionStatus={getSessionStatus}
+              />
+            </div>
+          ))}
         </div>
-      </div>
-
-      {/* Empty Filter State */}
-      {filteredSessions.length === 0 && sessions.length > 0 && (
-        <div className="text-center py-12">
-          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-white py-12 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100">
+            <Clock size={24} className="text-slate-400" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No sessions match your filter</h3>
-          <p className="text-gray-600">Try selecting a different status filter</p>
-          <button 
-            onClick={() => setFilterStatus('all')}
-            className="mt-4 px-4 py-2 text-sm font-medium text-[#2563eb] hover:text-[#1d4ed8]"
+          <h3 className="text-sm font-semibold text-slate-900">No sessions match this filter</h3>
+          <p className="mt-1 text-xs text-slate-500">Try selecting a different status.</p>
+          <button
+            onClick={() => setFilterStatus("all")}
+            className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
           >
             Clear filter
           </button>
